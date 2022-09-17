@@ -49,6 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Slf4j
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
+@ContextConfiguration(classes = {TestRedisConfig.class})
 @AutoConfigureRestDocs(uriScheme = "https", uriHost = "docs.api.com")
 @SpringBootTest
 class MemberApiControllerTest {

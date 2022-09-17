@@ -12,7 +12,7 @@ import org.springframework.data.redis.repository.configuration.EnableRedisReposi
 
 
 @TestConfiguration
-@EnableRedisRepositories(basePackages = "com.jaramgroupware.jgwauth.domain.redis")
+@EnableRedisRepositories
 public class TestRedisConfig {
 
     @Value("${spring.redis.host}")
