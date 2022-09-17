@@ -5,12 +5,16 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthResponseDto;
-import com.jaramgroupware.jgwauth.service.MemberAuthService;
+import com.jaramgroupware.jgwauth.service.MemberAuthServiceImpl;
+import com.jaramgroupware.jgwauth.service.MemberServiceImpl;
+import com.jaramgroupware.jgwauth.testConfig.EmbeddedRedisConfig;
+import com.jaramgroupware.jgwauth.testConfig.TestFireBaseConfig;
+import com.jaramgroupware.jgwauth.testConfig.TestRedisConfig;
 import com.jaramgroupware.jgwauth.utils.TestUtils;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthResponseDto;
 import com.jaramgroupware.jgwauth.dto.member.serviceDto.MemberResponseServiceDto;
-import com.jaramgroupware.jgwauth.service.MemberService;
-import com.jaramgroupware.jgwauth.utils.firebase.FireBaseClient;
+import com.jaramgroupware.jgwauth.utils.firebase.FireBaseClientImpl;
+import com.jaramgroupware.jgwauth.utils.firebase.FireBaseResult;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +29,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -54,13 +59,13 @@ class MemberApiControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MockBean
-    private MemberService memberService;
+    private MemberServiceImpl memberService;
 
     @MockBean
-    private MemberAuthService memberAuthService;
+    private MemberAuthServiceImpl memberAuthService;
 
     @MockBean
-    private FireBaseClient fireBaseClient;
+    private FireBaseClientImpl fireBaseClient;
 
     private final TestUtils testUtils = new TestUtils();
 
@@ -92,15 +97,19 @@ class MemberApiControllerTest {
                 .token(testUtils.getTestToken())
                 .ttl(10L)
                 .build();
+        FireBaseResult fireBaseResult = FireBaseResult.builder()
+                .uid(testUtils.getTestUid())
+                .ttl(10L)
+                .build();
 
         //redis에서 miss,
         Mockito.doReturn(Optional.empty()).when(memberAuthService).find(testUtils.getTestToken());
 
         //token 인증 후에,
-        Mockito.doReturn(targetMemberDto.getId()).when(fireBaseClient).checkToken(testUtils.getTestToken());
+        Mockito.doReturn(fireBaseResult).when(fireBaseClient).checkToken(testUtils.getTestToken());
 
         //db에서 찾기
-        Mockito.doReturn(targetMemberDto).when(memberService).findById(targetMemberDto.getId());
+        Mockito.doReturn(testUtils.getTestMember()).when(memberService).findById(targetMemberDto.getId());
 
         //캐싱
         Mockito.doReturn(true).when(memberAuthService).add(memberAuthAddRequestDto);
@@ -118,9 +127,9 @@ class MemberApiControllerTest {
                                 parameterWithName("token").description("인증할 firebase token")
                         ),
                         responseFields(
-                                fieldWithPath("is_valid").description("인증 여부").attributes(field("constraints", "True면 인증에 성공한 것이고, False면 인증에 실패했거나, Not valid한 Token임")),
+                                fieldWithPath("valid").description("인증 여부").attributes(field("constraints", "True면 인증에 성공한 것이고, False면 인증에 실패했거나, Not valid한 Token임")),
                                 fieldWithPath("role_id").description("해당 유저의 Role id"),
-                                fieldWithPath("id").description("해당 유저의 firebase uid")
+                                fieldWithPath("uid").description("해당 유저의 firebase uid")
                         ))
                 );
 
@@ -140,7 +149,9 @@ class MemberApiControllerTest {
         //given
 
         MemberResponseServiceDto targetMemberDto = new MemberResponseServiceDto(testUtils.getTestMember());
-        MemberAuthResponseDto testTarget =  MemberAuthResponseDto.builder()
+
+        MemberAuthResponseDto testTarget = MemberAuthResponseDto.builder()
+                .isValid(true)
                 .member(objectMapper.writeValueAsString(testUtils.getTestMember()))
                 .ttl(10L)
                 .token(testUtils.getTestToken())
@@ -153,7 +164,7 @@ class MemberApiControllerTest {
                 .build();
 
         //redis에서 hit,
-        Mockito.doReturn(testTarget).when(memberAuthService).find(testUtils.getTestToken());
+        Mockito.doReturn(Optional.of(testTarget)).when(memberAuthService).find(testUtils.getTestToken());
 
         //when
         ResultActions result = mvc.perform(
@@ -194,7 +205,7 @@ class MemberApiControllerTest {
 
         //then
         result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("완료"));
+                .andExpect(jsonPath("$.message").value("ok"));
         verify(memberAuthService).revoke(testUtils.getTestToken());
     }
 }

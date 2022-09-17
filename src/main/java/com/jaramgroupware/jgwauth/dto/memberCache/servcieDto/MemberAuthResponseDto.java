@@ -8,25 +8,27 @@ import com.jaramgroupware.jgwauth.domain.jpa.member.Member;
 import com.jaramgroupware.jgwauth.domain.redis.memberCache.MemberAuth;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthResponseDto;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
+
+@Slf4j
 @ToString
 @Getter
 @AllArgsConstructor
-@EqualsAndHashCode
 @Builder
 public class MemberAuthResponseDto {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private String token;
     private Boolean isValid;
     private String member;
     private Long ttl;
 
     public AuthResponseDto toAuthResponseDto() throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         Member parseMember = objectMapper.readValue(member,Member.class);
-
         return AuthResponseDto.builder()
                 .uid(parseMember.getId())
                 .isValid(isValid)
@@ -34,4 +36,11 @@ public class MemberAuthResponseDto {
                 .build();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        MemberAuthResponseDto target = (MemberAuthResponseDto) o;
+        return token.equals(target.getToken()) &&
+                member.equals(target.getMember()) &&
+                isValid == target.getIsValid();
+    }
 }

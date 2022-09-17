@@ -27,9 +27,15 @@ public class FireBaseConfig {
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                 .setStorageBucket("heroku-sample.appspot.com")
                 .build();
+        FirebaseApp app;
+        if(FirebaseApp.getApps().size() == 0){
+            app = FirebaseApp.initializeApp(options);
+        }else{
+            app = FirebaseApp.getApps().get(0);
+        }
 
-        FirebaseApp app = FirebaseApp.initializeApp(options);
         logger.info("FirebaseApp initialized" + app.getName());
+
         return app;
     }
 

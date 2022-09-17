@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 class MemberServiceTest {
 
     @InjectMocks
-    private MemberService memberService;
+    private MemberServiceImpl memberService;
 
     @Mock
     private MemberRepository memberRepository;
@@ -50,11 +50,11 @@ class MemberServiceTest {
         doReturn(Optional.of(testEntity)).when(memberRepository).findMemberById(testID);
 
         //when
-        MemberResponseServiceDto result = memberService.findById(testID);
+        Member result = memberService.findById(testID);
 
         //then
         Assertions.assertNotNull(result);
-        Assertions.assertEquals(result.toString(), Objects.requireNonNull(result).toString());
+        Assertions.assertEquals(testEntity.toString(), Objects.requireNonNull(result).toString());
         verify(memberRepository).findMemberById(testID);
     }
 }

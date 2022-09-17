@@ -20,8 +20,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import javax.validation.ConstraintViolationException;
 
-import static com.jaramgroupware.jgwauth.utils.exception.ErrorCode.INTERNAL_SERVER_ERROR;
-
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -69,12 +67,11 @@ public class GlobalExceptionHandler {
         logger.info("UID = ({}) Request = ({}) Raise = ({})",
                 request.getHeader("user_uid"),
                 request.getContextPath(),
-                exception.getErrorCode().getErrorCode().getClass().getSimpleName()
+                exception.getMessage()
         );
 
         return new ResponseEntity<>(ExceptionMessageDto.builder()
                 .status(exception.getErrorCode().getHttpStatus())
-                .type(exception.getErrorCode().getErrorCode())
                 .title(exception.getErrorCode().getTitle())
                 .detail(exception.getErrorCode().getDetail() + " " +exception.getMessage())
                 .build()
@@ -137,6 +134,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({ Exception.class })
     protected ResponseEntity<ExceptionMessageDto> handleServerException(Exception exception, WebRequest request) {
         logger.info("error : {} {}",exception.getClass().getSimpleName(),exception.getMessage());
+        logger.debug("error : {}",exception.getStackTrace());
         logger.info("UID = ({}) Request = ({}) Raise = ({})",
                 request.getHeader("user_uid"),
                 request.getContextPath(),
@@ -144,10 +142,7 @@ public class GlobalExceptionHandler {
         );
 
         return new ResponseEntity<>(ExceptionMessageDto.builder()
-                .status(INTERNAL_SERVER_ERROR.getHttpStatus())
-                .type(INTERNAL_SERVER_ERROR.getErrorCode())
-                .title(INTERNAL_SERVER_ERROR.getTitle())
-                .detail(INTERNAL_SERVER_ERROR.getDetail())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .build()
                 ,HttpStatus.INTERNAL_SERVER_ERROR);
     }

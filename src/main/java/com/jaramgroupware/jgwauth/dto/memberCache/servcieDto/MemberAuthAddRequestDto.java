@@ -10,22 +10,22 @@ import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.TimeToLive;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @ToString
 @Getter
 @AllArgsConstructor
-@EqualsAndHashCode
 @Builder
 public class MemberAuthAddRequestDto {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private String token;
     private Boolean isValid;
     private Member member;
     private Long ttl;
 
     public MemberAuth toEntity() throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
@@ -37,4 +37,11 @@ public class MemberAuthAddRequestDto {
                 .build();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        MemberAuthAddRequestDto target = (MemberAuthAddRequestDto) o;
+        return token.equals(target.getToken()) &&
+                member.toString().equals(target.getMember().toString()) &&
+                isValid == target.getIsValid();
+    }
 }

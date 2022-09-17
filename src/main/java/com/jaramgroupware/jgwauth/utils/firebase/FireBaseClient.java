@@ -1,5 +1,7 @@
 package com.jaramgroupware.jgwauth.utils.firebase;
 
+import com.google.firebase.auth.FirebaseAuthException;
+
 public interface FireBaseClient {
-    String checkToken(String token);
+    FireBaseResult checkToken(String token) throws FirebaseAuthException;
 }

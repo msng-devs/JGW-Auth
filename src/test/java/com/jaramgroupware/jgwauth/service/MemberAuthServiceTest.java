@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verify;
 class MemberAuthServiceTest {
 
     @InjectMocks
-    private MemberAuthService memberAuthService;
+    private MemberAuthServiceImpl memberAuthService;
 
     @Mock
     private MemberAuthRepository memberAuthRepository;
