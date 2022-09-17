@@ -30,12 +30,21 @@ jobs:
           distribution: 'temurin'
 
       - uses: actions/checkout@v3
-      - name: get tableBuild.sql,testDataSet.sql
+      - name: get sql
         uses: actions/checkout@v3
         with:
           repository: msng-devs/JGW-Secret
           ref: auth
           path: "./src/test/resources"
+          token: ${{ secrets.TOKEN }}
+
+      - uses: actions/checkout@v3
+      - name: get firebase
+        uses: actions/checkout@v3
+        with:
+          repository: msng-devs/JGW-Secret
+          ref: auth-firebase
+          path: "./src/main/resources"
           token: ${{ secrets.TOKEN }}
 
       - name: Grant execute permission for gradlew
