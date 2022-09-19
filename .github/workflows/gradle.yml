@@ -35,13 +35,11 @@ jobs:
         with:
           repository: msng-devs/JGW-Secret
           ref: auth
-          path: "./src/main/resources/"
+          path: "./src/test/resources/"
           token: ${{ secrets.TOKEN }}
-      - name: move testDataSet.sql
-        run: mv ./src/main/resources/testDataSet.sql ./src/test/resources/testDataSet.sql
 
-      - name: move tableBuild.sql
-        run: mv ./src/main/resources/tableBuild.sql ./src/test/resources/tableBuild.sql
+      - name: move config files
+        run: mv application-dev.properties application-product.properties firebase.json logback-dev.xml logback-product.xml ./src/main/resources
 
       - name: print tree
         run: tree -aF .
