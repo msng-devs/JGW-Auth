@@ -29,25 +29,19 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
-
-
       - uses: actions/checkout@v3
       - name: get firebase
         uses: actions/checkout@v3
         with:
           repository: msng-devs/JGW-Secret
-          ref: configauth
+          ref: auth
           path: "./src/main/resources/"
           token: ${{ secrets.TOKEN }}
+      - name: move testDataSet.sql
+        run: mv ./src/main/resources/testDataSet.sql ./src/test/resources/testDataSet.sql
 
-      - uses: actions/checkout@v2
-      - name: get sql
-        uses: actions/checkout@v2
-        with:
-          repository: msng-devs/JGW-Secret
-          ref: sqlauth
-          path: "./src/test/resources/"
-          token: ${{ secrets.TOKEN }}
+      - name: move tableBuild.sql
+        run: mv ./src/main/resources/tableBuild.sql ./src/test/resources/tableBuild.sql
 
       - name: print tree
         run: tree -aF .
