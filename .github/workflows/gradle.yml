@@ -35,7 +35,7 @@ jobs:
         with:
           repository: msng-devs/JGW-Secret
           ref: auth
-          path: "./src/test/resources/"
+          path: "./src/main/resources/"
           token: ${{ secrets.TOKEN }}
 
       - uses: actions/checkout@v3
