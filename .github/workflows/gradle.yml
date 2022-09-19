@@ -37,7 +37,7 @@ jobs:
           ref: sqlauth
           path: "./src/test/resources/"
           token: ${{ secrets.TOKEN }}
-      - run: ls
+          fetch-depth: 0
 
       - uses: actions/checkout@v3
       - name: get firebase
