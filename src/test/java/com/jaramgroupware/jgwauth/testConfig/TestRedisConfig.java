@@ -15,11 +15,9 @@ import org.springframework.data.redis.repository.configuration.EnableRedisReposi
 @EnableRedisRepositories
 public class TestRedisConfig {
 
-    @Value("${spring.redis.host}")
-    private String redisHost;
+    private final String redisHost = "localhost";
 
-    @Value("${spring.redis.port}")
-    private int redisPort;
+    private final int redisPort = 6379;
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
