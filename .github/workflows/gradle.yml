@@ -47,6 +47,9 @@ jobs:
           path: "./src/main/resources/"
           token: ${{ secrets.TOKEN }}
 
+      - name: print tree
+        run: tree -aF .
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
