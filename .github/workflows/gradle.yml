@@ -39,7 +39,7 @@ jobs:
           token: ${{ secrets.TOKEN }}
 
       - name: move config files
-        run: mv application-dev.properties application-product.properties firebase.json logback-dev.xml logback-product.xml ./src/main/resources
+        run: mv ./src/test/resources/application-dev.properties ./src/test/resources/application-product.properties ./src/test/resources/firebase.json ./src/test/resources/logback-dev.xml ./src/test/resources/logback-product.xml ./src/main/resources
 
       - name: print tree
         run: tree -aF .
