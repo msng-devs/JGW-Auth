@@ -8,6 +8,7 @@ import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthResponseD
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.TokenAuthAddRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,6 @@ public class MemberAuthServiceImpl implements MemberAuthService {
 
     private final MemberAuthRepository memberAuthRepository;
     private final RedisTemplate<String,String> redisTemplate;
-    private final ValueOperations<String,String> valueOperations;
 
     @Override
     @Transactional
@@ -37,7 +37,7 @@ public class MemberAuthServiceImpl implements MemberAuthService {
     @Override
     @Transactional
     public Boolean add(TokenAuthAddRequestDto tokenAuthAddRequestDto){
-
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         valueOperations.set("only_"+tokenAuthAddRequestDto.getToken(),tokenAuthAddRequestDto.getUid());
         redisTemplate.expire("only_"+tokenAuthAddRequestDto.getToken(), Duration.ofMinutes(tokenAuthAddRequestDto.getTtl()));
 
@@ -62,7 +62,7 @@ public class MemberAuthServiceImpl implements MemberAuthService {
     @Override
     @Transactional(readOnly = true)
     public Optional<String> findOnlyToken(String token) {
-
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String uid = valueOperations.get("only_"+token);
         if(uid == null) return Optional.empty();
 
@@ -74,7 +74,7 @@ public class MemberAuthServiceImpl implements MemberAuthService {
     public boolean revoke(String token) {
         MemberAuth memberAuth = memberAuthRepository.findById(token)
                 .orElse(null);
-
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String onlyToken = valueOperations.get("only_"+token);
 
         if(memberAuth != null) memberAuthRepository.delete(memberAuth);

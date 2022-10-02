@@ -42,12 +42,9 @@ class MemberAuthServiceTest {
     private MemberAuthRepository memberAuthRepository;
 
     @Mock
-    private StringRedisTemplate redisTemplate;
+    private RedisTemplate<String,String> redisTemplate;
 
     private final TestUtils testUtils = new TestUtils();
-
-    @Mock
-    private ValueOperations valueOperations;
 
     @BeforeEach
     void setUp() {
@@ -84,7 +81,8 @@ class MemberAuthServiceTest {
                 .uid(testUtils.getTestUid())
                 .ttl(10L)
                 .build();
-
+        ValueOperations valueOperations = Mockito.mock(ValueOperations.class);
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         //when
         Boolean result = memberAuthService.add(tokenAuthAddRequestDto);
 
@@ -119,6 +117,8 @@ class MemberAuthServiceTest {
     @Test
     void findById(){
         //given
+        ValueOperations valueOperations = Mockito.mock(ValueOperations.class);
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(testUtils.getTestUid()).when(valueOperations).get("only_"+testUtils.getTestToken());
 
         //when
@@ -140,9 +140,11 @@ class MemberAuthServiceTest {
                 .build();
 
         MemberAuth target = memberCacheAddRequestDto.toEntity();
-
+        Boolean targetSec = true;
+        ValueOperations valueOperations = Mockito.mock(ValueOperations.class);
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(Optional.of(target)).when(memberAuthRepository).findById(target.getToken());
-        doReturn(testUtils.getTestUid()).when(valueOperations).get("only_"+testUtils.getTestToken());
+        doReturn("true").when(valueOperations).get("only_"+testUtils.getTestToken());
         doReturn(true).when(redisTemplate).delete("only_"+testUtils.getTestToken());
 
         //when
