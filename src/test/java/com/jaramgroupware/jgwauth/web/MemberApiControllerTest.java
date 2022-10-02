@@ -91,7 +91,7 @@ class MemberApiControllerTest {
         MemberResponseServiceDto targetMemberDto = new MemberResponseServiceDto(testUtils.getTestMember());
 
         AuthFullResponseDto testRes = AuthFullResponseDto.builder()
-                .isValid(true)
+                .valid(true)
                 .roleID(targetMemberDto.getRoleID())
                 .uid(targetMemberDto.getId())
                 .build();
@@ -122,23 +122,12 @@ class MemberApiControllerTest {
 
         //when
         ResultActions result = mvc.perform(
-                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
+                        .header("Token",testUtils.getTestToken())
                         .queryParam("onlyToken","false")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andDo(document("auth",
-                        preprocessRequest(prettyPrint()),
-                        preprocessResponse(prettyPrint()),
-                        pathParameters(
-                                parameterWithName("token").description("인증할 firebase token")
-                        ),
-                        responseFields(
-                                fieldWithPath("valid").description("인증 여부").attributes(field("constraints", "True면 인증에 성공한 것이고, False면 인증에 실패했거나, Not valid한 Token임")),
-                                fieldWithPath("role_id").description("해당 유저의 Role id"),
-                                fieldWithPath("uid").description("해당 유저의 firebase uid")
-                        ))
-                );
+                .andDo(print());
 
         //then
         result.andExpect(status().isOk())
@@ -165,7 +154,7 @@ class MemberApiControllerTest {
                 .build();
 
         AuthFullResponseDto testRes = AuthFullResponseDto.builder()
-                .isValid(true)
+                .valid(true)
                 .roleID(targetMemberDto.getRoleID())
                 .uid(targetMemberDto.getId())
                 .build();
@@ -175,7 +164,8 @@ class MemberApiControllerTest {
 
         //when
         ResultActions result = mvc.perform(
-                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
+                        .header("Token",testUtils.getTestToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print());
@@ -195,20 +185,11 @@ class MemberApiControllerTest {
 
         //when
         ResultActions result = mvc.perform(
-                RestDocumentationRequestBuilders.delete("/api/v1/auth/{token}",testUtils.getTestToken())
+                RestDocumentationRequestBuilders.delete("/api/v1/auth")
+                        .header("Token",testUtils.getTestToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andDo(document("revoke",
-                        preprocessRequest(prettyPrint()),
-                        preprocessResponse(prettyPrint()),
-                        pathParameters(
-                                parameterWithName("token").description("취소할 firebase token")
-                        ),
-                        responseFields(
-                                fieldWithPath("message").description("완료 여부")
-                        ))
-                );
+                .andDo(print());
 
         //then
         result.andExpect(status().isOk())
@@ -223,7 +204,7 @@ class MemberApiControllerTest {
 
         AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
                 .uid(testUtils.getTestUid())
-                .isValid(true)
+                .valid(true)
                 .build();
 
         FireBaseResult fireBaseResult = FireBaseResult.builder()
@@ -247,8 +228,9 @@ class MemberApiControllerTest {
 
         //when
         ResultActions result = mvc.perform(
-                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
                         .queryParam("onlyToken","true")
+                        .header("Token",testUtils.getTestToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print());
@@ -276,7 +258,7 @@ class MemberApiControllerTest {
 
         AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
                 .uid(testUtils.getTestUid())
-                .isValid(true)
+                .valid(true)
                 .build();
 
         //redis에서 hit,
@@ -285,7 +267,8 @@ class MemberApiControllerTest {
 
         //when
         ResultActions result = mvc.perform(
-                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
+                        .header("Token",testUtils.getTestToken())
                         .queryParam("onlyToken","true")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -307,7 +290,7 @@ class MemberApiControllerTest {
 
         AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
                 .uid("")
-                .isValid(false)
+                .valid(false)
                 .build();
 
         //redis에서 hit,
@@ -316,8 +299,9 @@ class MemberApiControllerTest {
 
         //when
         ResultActions result = mvc.perform(
-                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
                         .queryParam("onlyToken","true")
+                        .header("Token",testUtils.getTestToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print());

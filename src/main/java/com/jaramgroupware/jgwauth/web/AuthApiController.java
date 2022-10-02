@@ -37,10 +37,10 @@ public class AuthApiController {
     private final MemberAuthServiceImpl memberAuthService;
     private final MemberServiceImpl memberService;
 
-    @GetMapping("/{token}")
+    @GetMapping("")
     public ResponseEntity<AuthResponseDto> auth(
             @RequestParam(value = "onlyToken",defaultValue = "false") boolean isOnlyToken,
-            @PathVariable String token
+            @RequestHeader(value = "Token") String token
     ) throws FirebaseAuthException, JsonProcessingException {
 
         if(!isOnlyToken){
@@ -91,7 +91,7 @@ public class AuthApiController {
 
         return ResponseEntity.ok(AuthFullResponseDto
                 .builder()
-                .isValid(true)
+                .valid(true)
                 .uid(member.getId())
                 .roleID(member.getRole().getId())
                 .build());
@@ -105,7 +105,7 @@ public class AuthApiController {
             log.debug("cache info {}",cacheResult);
             return ResponseEntity.ok(AuthTinyResponseDto
                     .builder()
-                    .isValid(cacheResult.length() >= 1)
+                    .valid(cacheResult.length() >= 1)
                     .uid(cacheResult)
                     .build());
         }
@@ -137,12 +137,12 @@ public class AuthApiController {
         return ResponseEntity.ok(AuthTinyResponseDto
                 .builder()
                 .uid(fireBaseResult.getUid())
-                .isValid(true)
+                .valid(true)
                 .build());
     }
 
-    @DeleteMapping("/{token}")
-    public ResponseEntity<MessageDto> revoke(@PathVariable String token) throws FirebaseAuthException, JsonProcessingException {
+    @DeleteMapping("")
+    public ResponseEntity<MessageDto> revoke(@RequestHeader(value = "Token") String token) throws FirebaseAuthException, JsonProcessingException {
         boolean res = memberAuthService.revoke(token);
 
         if(!res) return ResponseEntity.notFound().build();

@@ -32,7 +32,7 @@ public class MemberAuthResponseDto {
         Member parseMember = objectMapper.readValue(member,Member.class);
         return AuthFullResponseDto.builder()
                 .uid(parseMember.getId())
-                .isValid(isValid)
+                .valid(isValid)
                 .roleID(parseMember.getRole().getId())
                 .build();
     }
