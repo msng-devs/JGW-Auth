@@ -5,6 +5,7 @@ import com.jaramgroupware.jgwauth.domain.redis.memberCache.MemberAuth;
 import com.jaramgroupware.jgwauth.domain.redis.memberCache.MemberAuthRepository;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthResponseDto;
+import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.TokenAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -13,10 +14,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,7 +41,13 @@ class MemberAuthServiceTest {
     @Mock
     private MemberAuthRepository memberAuthRepository;
 
+    @Mock
+    private StringRedisTemplate redisTemplate;
+
     private final TestUtils testUtils = new TestUtils();
+
+    @Mock
+    private ValueOperations valueOperations;
 
     @BeforeEach
     void setUp() {
@@ -64,6 +77,25 @@ class MemberAuthServiceTest {
     }
 
     @Test
+    void addToken(){
+        //given
+        TokenAuthAddRequestDto tokenAuthAddRequestDto = TokenAuthAddRequestDto.builder()
+                .token(testUtils.getTestToken())
+                .uid(testUtils.getTestUid())
+                .ttl(10L)
+                .build();
+
+        //when
+        Boolean result = memberAuthService.add(tokenAuthAddRequestDto);
+
+        //then
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(result.toString(), Objects.requireNonNull(result).toString());
+        verify(valueOperations).set("only_"+tokenAuthAddRequestDto.getToken(),tokenAuthAddRequestDto.getUid());
+        verify(redisTemplate).expire("only_"+tokenAuthAddRequestDto.getToken(), Duration.ofMinutes(tokenAuthAddRequestDto.getTtl()));
+    }
+
+    @Test
     void find() throws JsonProcessingException {
         //given
         MemberAuthAddRequestDto memberCacheAddRequestDto = MemberAuthAddRequestDto.builder()
@@ -76,7 +108,6 @@ class MemberAuthServiceTest {
         MemberAuth target = memberCacheAddRequestDto.toEntity();
 
         doReturn(Optional.of(target)).when(memberAuthRepository).findById(target.getToken());
-
         //when
         MemberAuthResponseDto result = memberAuthService.find(testUtils.getTestToken()).orElseThrow();
 
@@ -84,6 +115,19 @@ class MemberAuthServiceTest {
         Assertions.assertNotNull(result);
         Assertions.assertEquals(result.toString(), Objects.requireNonNull(result).toString());
         verify(memberAuthRepository).findById(target.getToken());
+    }
+    @Test
+    void findById(){
+        //given
+        doReturn(testUtils.getTestUid()).when(valueOperations).get("only_"+testUtils.getTestToken());
+
+        //when
+        String result = memberAuthService.findOnlyToken(testUtils.getTestToken()).orElseThrow();
+
+        //then
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(result, testUtils.getTestUid());
+        verify(valueOperations).get("only_"+testUtils.getTestToken());
     }
     @Test
     void revoke() throws JsonProcessingException {
@@ -98,15 +142,17 @@ class MemberAuthServiceTest {
         MemberAuth target = memberCacheAddRequestDto.toEntity();
 
         doReturn(Optional.of(target)).when(memberAuthRepository).findById(target.getToken());
+        doReturn(testUtils.getTestUid()).when(valueOperations).get("only_"+testUtils.getTestToken());
+        doReturn(true).when(redisTemplate).delete("only_"+testUtils.getTestToken());
 
         //when
-        Boolean result = memberAuthService.revoke(testUtils.getTestToken());
+        memberAuthService.revoke(testUtils.getTestToken());
 
         //then
-        Assertions.assertNotNull(result);
-        Assertions.assertEquals(result.toString(), Objects.requireNonNull(result).toString());
         verify(memberAuthRepository).findById(target.getToken());
+        verify(valueOperations).get("only_"+testUtils.getTestToken());
         verify(memberAuthRepository).delete(target);
+        verify(redisTemplate).delete("only_"+testUtils.getTestToken());
     }
 
 }

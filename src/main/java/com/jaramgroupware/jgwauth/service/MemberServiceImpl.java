@@ -23,6 +23,6 @@ public class MemberServiceImpl implements MemberService {
     public Member findById(String id) {
 
         return memberRepository.findMemberById(id)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+                .orElse(new Member());
     }
 }

@@ -3,8 +3,11 @@ package com.jaramgroupware.jgwauth.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthFullResponseDto;
+import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthTinyResponseDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthResponseDto;
+import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.TokenAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.service.MemberAuthServiceImpl;
 import com.jaramgroupware.jgwauth.service.MemberServiceImpl;
 import com.jaramgroupware.jgwauth.testConfig.EmbeddedRedisConfig;
@@ -87,17 +90,19 @@ class MemberApiControllerTest {
 
         MemberResponseServiceDto targetMemberDto = new MemberResponseServiceDto(testUtils.getTestMember());
 
-        AuthResponseDto testRes = AuthResponseDto.builder()
+        AuthFullResponseDto testRes = AuthFullResponseDto.builder()
                 .isValid(true)
                 .roleID(targetMemberDto.getRoleID())
                 .uid(targetMemberDto.getId())
                 .build();
+
         MemberAuthAddRequestDto memberAuthAddRequestDto = MemberAuthAddRequestDto.builder()
                 .isValid(true)
                 .member(testUtils.getTestMember())
                 .token(testUtils.getTestToken())
                 .ttl(10L)
                 .build();
+
         FireBaseResult fireBaseResult = FireBaseResult.builder()
                 .uid(testUtils.getTestUid())
                 .ttl(10L)
@@ -118,6 +123,7 @@ class MemberApiControllerTest {
         //when
         ResultActions result = mvc.perform(
                 RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                        .queryParam("onlyToken","false")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
@@ -158,7 +164,7 @@ class MemberApiControllerTest {
                 .token(testUtils.getTestToken())
                 .build();
 
-        AuthResponseDto testRes = AuthResponseDto.builder()
+        AuthFullResponseDto testRes = AuthFullResponseDto.builder()
                 .isValid(true)
                 .roleID(targetMemberDto.getRoleID())
                 .uid(targetMemberDto.getId())
@@ -208,5 +214,119 @@ class MemberApiControllerTest {
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("ok"));
         verify(memberAuthService).revoke(testUtils.getTestToken());
+    }
+
+    @DisplayName("Redis에 캐싱 되어있지 않은 토큰 인증")
+    @Test
+    void authTokenWithNoCache() throws Exception {
+        //given
+
+        AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
+                .uid(testUtils.getTestUid())
+                .isValid(true)
+                .build();
+
+        FireBaseResult fireBaseResult = FireBaseResult.builder()
+                .uid(testUtils.getTestUid())
+                .ttl(10L)
+                .build();
+
+        //redis에서 miss,
+        Mockito.doReturn(Optional.empty()).when(memberAuthService).findOnlyToken(testUtils.getTestToken());
+
+        //token 인증 후에,
+        Mockito.doReturn(fireBaseResult).when(fireBaseClient).checkToken(testUtils.getTestToken());
+
+        //캐싱
+        Mockito.doReturn(true).when(memberAuthService).add(TokenAuthAddRequestDto
+                .builder()
+                .token(testUtils.getTestToken())
+                .uid(testUtils.getTestUid())
+                .ttl(fireBaseResult.getTtl())
+                .build());
+
+        //when
+        ResultActions result = mvc.perform(
+                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                        .queryParam("onlyToken","true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print());
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(testRes)));
+
+        verify(memberAuthService).findOnlyToken(testUtils.getTestToken());
+        verify(fireBaseClient).checkToken(testUtils.getTestToken());
+        verify(memberAuthService).add(TokenAuthAddRequestDto
+                .builder()
+                .token(testUtils.getTestToken())
+                .uid(testUtils.getTestUid())
+                .ttl(fireBaseResult.getTtl())
+                .build());
+        verify(fireBaseClient).checkToken(testUtils.getTestToken());
+
+    }
+
+    @DisplayName("Redis에 캐싱 되어있는 토큰 인증")
+    @Test
+    void authTokenWithCache() throws Exception {
+        //given
+
+        AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
+                .uid(testUtils.getTestUid())
+                .isValid(true)
+                .build();
+
+        //redis에서 hit,
+        Mockito.doReturn(Optional.of(testUtils.getTestUid())).when(memberAuthService).findOnlyToken(testUtils.getTestToken());
+
+
+        //when
+        ResultActions result = mvc.perform(
+                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                        .queryParam("onlyToken","true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print());
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(testRes)));
+
+        verify(memberAuthService).findOnlyToken(testUtils.getTestToken());
+
+    }
+
+
+    @DisplayName("Redis에 캐싱 되어있는 토큰 인증 실패")
+    @Test
+    void authTokenWithCacheFail() throws Exception {
+        //given
+
+        AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
+                .uid("")
+                .isValid(false)
+                .build();
+
+        //redis에서 hit,
+        Mockito.doReturn(Optional.of("")).when(memberAuthService).findOnlyToken(testUtils.getTestToken());
+
+
+        //when
+        ResultActions result = mvc.perform(
+                RestDocumentationRequestBuilders.get("/api/v1/auth/{token}",testUtils.getTestToken())
+                        .queryParam("onlyToken","true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print());
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(testRes)));
+
+        verify(memberAuthService).findOnlyToken(testUtils.getTestToken());
+
     }
 }
