@@ -127,7 +127,16 @@ class MemberApiControllerTest {
                         .queryParam("onlyToken","false")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andDo(print());
+                .andDo(print())
+                .andDo(document("auth-fully",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("valid").description("해당 토큰이 valid 한지 여부"),
+                                fieldWithPath("role_id").description("해당 토큰의 권한 레벨 ID"),
+                                fieldWithPath("uid").description("해당 토큰의 유저의 UID(Firebase)")
+                        )
+                ));
 
         //then
         result.andExpect(status().isOk())
@@ -233,7 +242,15 @@ class MemberApiControllerTest {
                         .header("Token",testUtils.getTestToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andDo(print());
+                .andDo(print())
+                .andDo(document("auth-only-token",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("valid").description("해당 토큰이 valid 한지 여부"),
+                                fieldWithPath("uid").description("해당 토큰의 유저의 UID(Firebase)")
+                        )
+                ));
 
         //then
         result.andExpect(status().isOk())
