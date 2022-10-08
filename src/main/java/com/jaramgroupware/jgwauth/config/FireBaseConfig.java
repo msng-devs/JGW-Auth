@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -20,11 +21,9 @@ public class FireBaseConfig {
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
         logger.info("Initializing Firebase.");
-        FileInputStream serviceAccount =
-                new FileInputStream("src/main/resources/firebase.json");
 
         FirebaseOptions options = new FirebaseOptions.Builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                .setCredentials(GoogleCredentials.fromStream(new ClassPathResource("firebase.json").getInputStream()))
                 .setStorageBucket("heroku-sample.appspot.com")
                 .build();
         FirebaseApp app;
