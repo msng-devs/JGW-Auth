@@ -91,9 +91,9 @@ public class AuthApiController {
 
         return ResponseEntity.ok(AuthFullResponseDto
                 .builder()
+                .roleID(member.getRole().getId())
                 .valid(true)
                 .uid(member.getId())
-                .roleID(member.getRole().getId())
                 .build());
     }
 
