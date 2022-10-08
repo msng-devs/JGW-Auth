@@ -10,6 +10,6 @@ RUN ./gradlew bootjar
 
 FROM openjdk:11
 COPY --from=builder build/libs/*.jar app.jar
-
-EXPOSE 50001
+HEALTHCHECK --interval=10s --timeout=3s CMD curl -L -s GET 'http://localhost:50002/ping' || PONG
+EXPOSE 50002
 ENTRYPOINT ["java","-Dspring.profiles.active=product","-jar","/app.jar"]

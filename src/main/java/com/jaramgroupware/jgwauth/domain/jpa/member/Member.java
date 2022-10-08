@@ -35,7 +35,7 @@ public class Member extends BaseEntity implements Serializable {
     private String id;
 
     @Email
-    @Column(name = "MEMBER_EMAIL",nullable = false,length =45)
+    @Column(name = "MEMBER_EMAIL",nullable = false,length =256)
     private String email;
 
     @Column(name = "MEMBER_NM",nullable = false,length =45)
