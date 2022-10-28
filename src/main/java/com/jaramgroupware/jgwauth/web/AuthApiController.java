@@ -7,12 +7,14 @@ import com.jaramgroupware.jgwauth.domain.jpa.member.Member;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthFullResponseDto;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthResponseDto;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthTinyResponseDto;
+import com.jaramgroupware.jgwauth.dto.auth.controllerDto.RegisterRequestDto;
 import com.jaramgroupware.jgwauth.dto.general.controllerDto.MessageDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthResponseDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.TokenAuthAddRequestDto;
 import com.jaramgroupware.jgwauth.service.MemberAuthServiceImpl;
 import com.jaramgroupware.jgwauth.service.MemberServiceImpl;
+import com.jaramgroupware.jgwauth.utils.exception.CustomException;
 import com.jaramgroupware.jgwauth.utils.firebase.FireBaseClientImpl;
 import com.jaramgroupware.jgwauth.utils.firebase.FireBaseResult;
 import lombok.RequiredArgsConstructor;
@@ -125,6 +127,14 @@ public class AuthApiController {
                     .ttl(1L)
                     .build());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (CustomException ex){
+            log.info("Token Auth Pass but not EmailVerified. (Token={})",token);
+            memberAuthService.add(TokenAuthAddRequestDto.builder()
+                    .token(token)
+                    .uid("")
+                    .ttl(1L)
+                    .build());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         log.info("firebase res (Token={})",fireBaseResult.toString());
         //add cache
@@ -149,5 +159,13 @@ public class AuthApiController {
 
         return ResponseEntity.ok(new MessageDto("ok"));
     }
+
+//    @PostMapping("")
+//    public ResponseEntity<MessageDto> register(@RequestBody RegisterRequestDto requestDto) throws FirebaseAuthException {
+//        String uid = fireBaseClient.registerUser(requestDto.getEmail(),requestDto.getPassword());
+//
+//        return ResponseEntity.ok(new MessageDto(uid));
+//
+//    }
 }
 

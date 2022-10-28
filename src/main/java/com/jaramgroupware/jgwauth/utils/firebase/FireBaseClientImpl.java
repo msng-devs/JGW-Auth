@@ -3,6 +3,9 @@ package com.jaramgroupware.jgwauth.utils.firebase;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.UserRecord;
+import com.jaramgroupware.jgwauth.utils.exception.CustomException;
+import com.jaramgroupware.jgwauth.utils.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,8 +26,9 @@ public class FireBaseClientImpl implements FireBaseClient {
 
     @Override
     public FireBaseResult checkToken(String token) throws FirebaseAuthException {
-        FirebaseToken result = firebaseAuth.verifyIdToken(token);
 
+        FirebaseToken result = firebaseAuth.verifyIdToken(token);
+        if(result.isEmailVerified()) throw new CustomException(ErrorCode.NOT_VERIFIED_EMAIL);
         LocalDateTime exp = Instant.ofEpochSecond((Long) result.getClaims().get("exp"))
                 .atZone(ZoneId.systemDefault()).toLocalDateTime();
 
@@ -33,5 +37,16 @@ public class FireBaseClientImpl implements FireBaseClient {
                 .uid(result.getUid())
                 .ttl(Duration.between(exp,LocalDateTime.now()).toMinutes())
                 .build();
+    }
+
+    public String registerUser(String email,String password) throws FirebaseAuthException {
+        UserRecord.CreateRequest newUser = new UserRecord.CreateRequest();
+        newUser.setEmail(email);
+        newUser.setEmailVerified(false);
+        newUser.setPassword(password);
+
+        UserRecord newUserRecord = firebaseAuth.createUser(newUser);
+
+        return newUserRecord.getUid();
     }
 }
