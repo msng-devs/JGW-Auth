@@ -1,5 +1,7 @@
 package com.jaramgroupware.jgwauth.utils.exception;
 
+import com.google.firebase.FirebaseException;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.jaramgroupware.jgwauth.dto.general.controllerDto.ExceptionMessageDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -224,4 +226,61 @@ public class GlobalExceptionHandler {
                 ,HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(FirebaseAuthException.class)
+    public ResponseEntity<ExceptionMessageDto> FirebaseAuthExceptionException(FirebaseAuthException exception, WebRequest request) {
+        logger.info("UID = ({}) Request = ({}) Raise = ({})",
+                request.getHeader("user_uid"),
+                request.getContextPath(),
+                "FirebaseAuthException"+exception.getAuthErrorCode().toString()
+        );
+        switch (exception.getAuthErrorCode()){
+            case CERTIFICATE_FETCH_FAILED:
+            case CONFIGURATION_NOT_FOUND:
+                return new ResponseEntity<>(ExceptionMessageDto.builder()
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .type(null)
+                        .title(exception.getAuthErrorCode().toString())
+                        .detail("인증서버에 오류가 발생했습니다.")
+                        .build()
+                        ,HttpStatus.INTERNAL_SERVER_ERROR);
+
+            case EMAIL_ALREADY_EXISTS:
+                return new ResponseEntity<>(ExceptionMessageDto.builder()
+                        .status(HttpStatus.BAD_REQUEST)
+                        .type(null)
+                        .title(exception.getAuthErrorCode().toString())
+                        .detail("이미 가입된 이메일입니다.")
+                        .build()
+                        ,HttpStatus.BAD_REQUEST);
+
+            case EMAIL_NOT_FOUND:
+                return new ResponseEntity<>(ExceptionMessageDto.builder()
+                        .status(HttpStatus.BAD_REQUEST)
+                        .type(null)
+                        .title(exception.getAuthErrorCode().toString())
+                        .detail("존재하지 않는 이메일입니다.")
+                        .build()
+                        ,HttpStatus.BAD_REQUEST);
+
+            case EXPIRED_ID_TOKEN:
+                return new ResponseEntity<>(ExceptionMessageDto.builder()
+                        .status(HttpStatus.FORBIDDEN)
+                        .type(null)
+                        .title(exception.getAuthErrorCode().toString())
+                        .detail("이미 만료된 ID 토큰입니다.")
+                        .build()
+                        ,HttpStatus.FORBIDDEN);
+
+            default:
+                break;
+        }
+
+        return new ResponseEntity<>(ExceptionMessageDto.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .type(null)
+                .title(exception.getAuthErrorCode().toString())
+                .detail("인증서버에 오류가 발생했습니다.")
+                .build()
+                ,HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
