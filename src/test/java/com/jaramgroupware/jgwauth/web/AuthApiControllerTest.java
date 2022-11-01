@@ -3,6 +3,9 @@ package com.jaramgroupware.jgwauth.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.google.firebase.ErrorCode;
+import com.google.firebase.FirebaseException;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthFullResponseDto;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthTinyResponseDto;
 import com.jaramgroupware.jgwauth.dto.memberCache.servcieDto.MemberAuthAddRequestDto;
@@ -16,6 +19,7 @@ import com.jaramgroupware.jgwauth.testConfig.TestRedisConfig;
 import com.jaramgroupware.jgwauth.utils.TestUtils;
 import com.jaramgroupware.jgwauth.dto.auth.controllerDto.AuthResponseDto;
 import com.jaramgroupware.jgwauth.dto.member.serviceDto.MemberResponseServiceDto;
+import com.jaramgroupware.jgwauth.utils.exception.CustomException;
 import com.jaramgroupware.jgwauth.utils.firebase.FireBaseClientImpl;
 import com.jaramgroupware.jgwauth.utils.firebase.FireBaseResult;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +44,7 @@ import java.util.Optional;
 
 import static com.jaramgroupware.jgwauth.testConfig.RestDocsConfig.field;
 import static org.mockito.Mockito.doReturn;
+
 import static org.mockito.Mockito.verify;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
@@ -55,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(classes = {TestRedisConfig.class})
 @AutoConfigureRestDocs(uriScheme = "https", uriHost = "docs.api.com")
 @SpringBootTest
-class MemberApiControllerTest {
+class AuthApiControllerTest {
 
     @Autowired
     private MockMvc mvc;
@@ -210,7 +215,6 @@ class MemberApiControllerTest {
     @Test
     void authTokenWithNoCache() throws Exception {
         //given
-
         AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
                 .uid(testUtils.getTestUid())
                 .valid(true)
@@ -306,8 +310,8 @@ class MemberApiControllerTest {
         //given
 
         AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
-                .uid("")
                 .valid(false)
+                .uid("")
                 .build();
 
         //redis에서 hit,
@@ -329,5 +333,116 @@ class MemberApiControllerTest {
 
         verify(memberAuthService).findOnlyToken(testUtils.getTestToken());
 
+    }
+
+    @DisplayName("Redis에 캐싱 되어있지 않은 토큰 인증 실패")
+    @Test
+    void authTokenWithNoCacheFail() throws Exception {
+        //given
+        AuthTinyResponseDto testRes = AuthTinyResponseDto.builder()
+                .uid("")
+                .valid(false)
+                .build();
+
+        //redis에서 miss,
+        Mockito.doReturn(Optional.empty()).when(memberAuthService).findOnlyToken(testUtils.getTestToken());
+
+        //token 인증 후에,
+        Mockito.when(fireBaseClient.checkToken(testUtils.getTestToken()))
+                .thenThrow(new FirebaseAuthException(
+                        new FirebaseException(ErrorCode.CONFLICT,"error",new CustomException(com.jaramgroupware.jgwauth.utils.exception.ErrorCode.MEMBER_NOT_FOUND))));
+
+        //when
+        ResultActions result = mvc.perform(
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
+                        .queryParam("onlyToken","true")
+                        .header("Token",testUtils.getTestToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print());
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(testRes)));
+
+        verify(memberAuthService).findOnlyToken(testUtils.getTestToken());
+        verify(fireBaseClient).checkToken(testUtils.getTestToken());
+
+    }
+
+    @DisplayName("Redis에 캐싱 되어있지 않은 유저 인증 실패")
+    @Test
+    void authWithNoCacheFail() throws Exception {
+        //given
+
+        MemberResponseServiceDto targetMemberDto = new MemberResponseServiceDto(testUtils.getTestMember());
+
+        AuthFullResponseDto testRes = AuthFullResponseDto.builder()
+                .valid(false)
+                .uid("")
+                .roleID(-1)
+                .build();
+
+
+
+        //redis에서 miss,
+        Mockito.doReturn(Optional.empty()).when(memberAuthService).find(testUtils.getTestToken());
+
+        //token 인증 후에,
+        Mockito.when(fireBaseClient.checkToken(testUtils.getTestToken()))
+                .thenThrow(new FirebaseAuthException(
+                        new FirebaseException(ErrorCode.CONFLICT,"error",new CustomException(com.jaramgroupware.jgwauth.utils.exception.ErrorCode.MEMBER_NOT_FOUND))));
+
+        //when
+        ResultActions result = mvc.perform(
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
+                        .header("Token",testUtils.getTestToken())
+                        .queryParam("onlyToken","false")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print());
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(testRes)));
+
+        verify(memberAuthService).find(testUtils.getTestToken());
+        verify(fireBaseClient).checkToken(testUtils.getTestToken());
+    }
+
+    @DisplayName("Redis에 캐싱 되어 있는 유저 인증 실패")
+    @Test
+    void authWithCacheFail() throws Exception {
+        //given
+
+        MemberAuthResponseDto testTarget = MemberAuthResponseDto.builder()
+                .isValid(false)
+                .member(null)
+                .ttl(10L)
+                .token(testUtils.getTestToken())
+                .build();
+
+        AuthFullResponseDto testRes = AuthFullResponseDto.builder()
+                .valid(false)
+                .roleID(-1)
+                .uid("")
+                .build();
+
+        //redis에서 hit,
+        Mockito.doReturn(Optional.of(testTarget)).when(memberAuthService).find(testUtils.getTestToken());
+
+        //when
+        ResultActions result = mvc.perform(
+                RestDocumentationRequestBuilders.get("/api/v1/auth")
+                        .header("Token",testUtils.getTestToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print());
+
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(testRes)));
+
+        verify(memberAuthService).find(testUtils.getTestToken());
     }
 }

@@ -59,6 +59,7 @@ public class AuthApiController {
         if(cacheResult != null){
             log.debug("Token hit. (Token={})",token);
             log.debug("cache info {}",cacheResult.toString());
+            log.debug("response : {}",cacheResult.toAuthResponseDto().toString());
             return ResponseEntity.ok(cacheResult.toAuthResponseDto());
         }
 
@@ -70,14 +71,22 @@ public class AuthApiController {
         try{
             fireBaseResult = fireBaseClient.checkToken(token);
         } catch (FirebaseAuthException ex){
+            //fail
             log.info("Token Auth Fail. (Token={})",token);
-            memberAuthService.add(MemberAuthAddRequestDto.builder()
+            memberAuthService.add(MemberAuthAddRequestDto
+                    .builder()
                     .token(token)
                     .ttl(1L)
                     .member(null)
                     .isValid(false)
                     .build());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+            return ResponseEntity.ok().body(AuthFullResponseDto
+                    .builder()
+                    .uid("")
+                    .roleID(-1)
+                    .valid(false)
+                    .build());
         }
 
         //find user info
@@ -108,7 +117,7 @@ public class AuthApiController {
             return ResponseEntity.ok(AuthTinyResponseDto
                     .builder()
                     .valid(cacheResult.length() >= 1)
-                    .uid(cacheResult)
+                    .uid((cacheResult.length() >= 1) ? cacheResult : "")
                     .build());
         }
 
@@ -120,21 +129,22 @@ public class AuthApiController {
         try{
             fireBaseResult = fireBaseClient.checkToken(token);
         } catch (FirebaseAuthException ex){
+            //fail
             log.info("Token Auth Fail. (Token={})",token);
             memberAuthService.add(TokenAuthAddRequestDto.builder()
                     .token(token)
                     .uid("")
                     .ttl(1L)
                     .build());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.ok().body(AuthTinyResponseDto.builder().uid("").valid(false).build());
         } catch (CustomException ex){
-            log.info("Token Auth Pass but not EmailVerified. (Token={})",token);
+            log.info("Token Auth Pass but not Email Verified. (Token={})",token);
             memberAuthService.add(TokenAuthAddRequestDto.builder()
                     .token(token)
                     .uid("")
                     .ttl(1L)
                     .build());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.ok().body(AuthTinyResponseDto.builder().uid("").valid(false).build());
         }
         log.info("firebase res (Token={})",fireBaseResult.toString());
         //add cache
