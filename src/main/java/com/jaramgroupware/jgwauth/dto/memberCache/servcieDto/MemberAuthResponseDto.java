@@ -29,11 +29,11 @@ public class MemberAuthResponseDto {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        Member parseMember = objectMapper.readValue(member,Member.class);
+        Member parseMember = (member != null) ? objectMapper.readValue(member,Member.class) : null;
         return AuthFullResponseDto.builder()
-                .uid(parseMember.getId())
+                .uid((parseMember != null) ? parseMember.getId() : "")
                 .valid(isValid)
-                .roleID(parseMember.getRole().getId())
+                .roleID((parseMember != null) ? parseMember.getRole().getId() : -1)
                 .build();
     }
 

@@ -21,6 +21,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import javax.validation.ConstraintViolationException;
+import java.util.Arrays;
 
 
 @RestControllerAdvice
@@ -87,7 +88,7 @@ public class GlobalExceptionHandler {
                 request.getContextPath(),
                 "IllegalArgumentException"
         );
-
+        logger.error("error");
         return new ResponseEntity<>(ExceptionMessageDto.builder()
                 .status(HttpStatus.BAD_REQUEST)
                 .type(null)
