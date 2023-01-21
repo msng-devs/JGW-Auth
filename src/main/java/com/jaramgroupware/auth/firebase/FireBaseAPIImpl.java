@@ -53,18 +53,9 @@ public class FireBaseAPIImpl implements FireBaseAPI {
     private void processingFireBaseAuthException(AuthErrorCode authErrorCode){
         switch (authErrorCode){
 
-            case EXPIRED_ID_TOKEN:
-            case INVALID_ID_TOKEN:
-            case REVOKED_ID_TOKEN:
-            case TENANT_ID_MISMATCH:
-            case CERTIFICATE_FETCH_FAILED:
-            case TENANT_NOT_FOUND:
-            case USER_DISABLED:
-            case USER_NOT_FOUND:
-                throw new FirebaseApiException(FireBaseErrorCode.NOT_VALID_TOKEN);
+            case EXPIRED_ID_TOKEN,INVALID_ID_TOKEN,REVOKED_ID_TOKEN,TENANT_ID_MISMATCH,CERTIFICATE_FETCH_FAILED,TENANT_NOT_FOUND,USER_DISABLED,USER_NOT_FOUND -> throw new FirebaseApiException(FireBaseErrorCode.NOT_VALID_TOKEN);
 
-            default:
-                throw new JGWAuthException(JGWAuthErrorCode.INTERNAL_SERVER_ERROR,"토큰을 인증하는 중, firebase 서버와 통신중 오류가 발생했습니다. 관리자에게 문의하세요");
+            default -> throw new JGWAuthException(JGWAuthErrorCode.INTERNAL_SERVER_ERROR,"토큰을 인증하는 중, firebase 서버와 통신중 오류가 발생했습니다. 관리자에게 문의하세요");
         }
     }
 
