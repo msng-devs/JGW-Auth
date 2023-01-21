@@ -1,0 +1,131 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.0.2-SNAPSHOT'
+    id 'io.spring.dependency-management' version '1.1.0'
+    id 'com.adarshr.test-logger' version '3.2.0'
+    id "org.asciidoctor.jvm.convert" version "3.3.2"
+}
+
+group = 'com.jaramgroupware'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+configurations {
+    asciidoctorExtensions // dependencies 에서 적용한 것 추가
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    testCompileOnly {
+        extendsFrom testAnnotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/snapshot' }
+}
+
+ext {
+    set('snippetsDir', file("build/generated-snippets"))
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    //lombok
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
+
+    testCompileOnly 'org.projectlombok:lombok:1.18.20'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
+    testAnnotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    implementation 'org.springframework.boot:spring-boot-starter-jersey'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+
+
+    // https://mvnrepository.com/artifact/org.hibernate.validator/hibernate-validator
+    implementation 'org.hibernate.validator:hibernate-validator:8.0.0.Final'
+
+    // https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+
+    //docs
+    asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+
+    //firebase
+    implementation 'com.google.firebase:firebase-admin:9.0.0'
+
+    //testing
+    runtimeOnly 'com.h2database:h2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0-RC1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.0-RC1'
+    testImplementation 'org.junit.vintage:junit-vintage-engine:5.8.2'
+    testImplementation 'org.mockito:mockito-core:4.6.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:4.6.1'
+    testImplementation 'it.ozimov:embedded-redis:0.7.3'
+
+    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-logging
+    implementation 'org.springframework.boot:spring-boot-starter-logging:3.0.2'
+
+}
+
+ext {
+    // 아래서 사용할 변수 선언
+    snippetsDir = file('build/generated-snippets')
+}
+tasks.named('test') {
+    systemProperty 'spring.profiles.active', 'test'
+    useJUnitPlatform()
+}
+asciidoctor { // asciidoctor 작업 구성
+    dependsOn test // test 작업 이후에 작동하도록 하는 설정
+    configurations 'asciidoctorExtensions' // 위에서 작성한 configuration 적용
+    inputs.dir snippetsDir // snippetsDir 를 입력으로 구성
+
+    // source가 없으면 .adoc파일을 전부 html로 만들어버림
+    // source 지정시 특정 adoc만 HTML로 만든다.
+    sources{
+        include("**/index.adoc","**/common/*.adoc")
+    }
+
+    // 특정 .adoc에 다른 adoc 파일을 가져와서(include) 사용하고 싶을 경우 경로를 baseDir로 맞춰주는 설정입니다.
+    // 개별 adoc으로 운영한다면 필요 없는 옵션입니다.
+    baseDirFollowsSourceFile()
+}
+
+// static/docs 폴더 비우기
+asciidoctor.doFirst {
+    delete file('src/main/resources/static/docs')
+}
+
+// asccidoctor 작업 이후 생성된 HTML 파일을 static/docs 로 copy
+task copyDocument(type: Copy) {
+    dependsOn asciidoctor
+    from file("build/docs/asciidoc")
+    into file("/docs")
+}
+
+bootJar {
+    dependsOn asciidoctor
+    from ("${asciidoctor.outputDir}/html5") {
+        into 'static/docs'
+    }
+}
+task devTest {
+    outputs.dir snippetsDir
+    finalizedBy test
+}
+task devBuild {
+    dependsOn devTest
+    dependsOn copyDocument
+    finalizedBy clean, build
+}
