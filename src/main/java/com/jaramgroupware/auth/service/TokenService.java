@@ -16,4 +16,5 @@ public interface TokenService {
     Boolean revokeUserToken(String userUID);
     boolean checkAccessToken(String accessToken);
     String checkRefreshToken(String refreshToken);
+    PublishTokenResponseServiceDto publishAccessToken(PublishTokenRequestServiceDto publishTokenRequestDto);
 }

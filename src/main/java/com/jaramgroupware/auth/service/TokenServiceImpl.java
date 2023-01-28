@@ -2,6 +2,8 @@ package com.jaramgroupware.auth.service;
 
 import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenRequestServiceDto;
 import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenResponseServiceDto;
+import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthErrorCode;
+import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthException;
 import com.jaramgroupware.auth.firebase.FireBaseTokenInfo;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwts;
@@ -90,6 +92,13 @@ public class TokenServiceImpl implements TokenService {
         return newTokens;
     }
 
+    //TODO 토큰발행 및 검증을 종합적으로 관리하는 클래스로 분리하기 (아래 코드는 임시임)
+    @Override
+    public PublishTokenResponseServiceDto publishAccessToken(PublishTokenRequestServiceDto publishTokenRequestDto) {
+
+        return createToken(publishTokenRequestDto.getUserUID(), publishTokenRequestDto.getEmail(), publishTokenRequestDto.getRoleID(),true);
+    }
+
     /**
      * 해당 access token을 block하는 함수
      * @param accessToken block할 access token
@@ -122,6 +131,7 @@ public class TokenServiceImpl implements TokenService {
     @Transactional
     public Boolean revokeUserToken(String userUID) {
         //TODO userUID로 모든 refresh token 삭제 로직 추가
+        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
         return null;
     }
 
@@ -147,7 +157,10 @@ public class TokenServiceImpl implements TokenService {
     public String checkRefreshToken(String refreshToken) {
         ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
         String key = "refresh_" + refreshToken;
-        return valueOperations.get(key);
+        String result = valueOperations.get(key);
+
+        if(result == null) throw new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"주어진 refresh 토큰이 유효하지 않습니다. 다시 로그인해주세요.");
+        return result;
     }
 
     /**
@@ -171,6 +184,7 @@ public class TokenServiceImpl implements TokenService {
         String refreshToken = null;
         Date refreshExpired = null;
 
+        //TODO 토큰발행 및 검증을 종합적으로 관리하는 클래스로 분리하기
         String accessToken = Jwts.builder()
                 .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
                 .setIssuer("jaram_access")

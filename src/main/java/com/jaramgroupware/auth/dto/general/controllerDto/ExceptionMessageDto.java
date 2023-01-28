@@ -1,10 +1,9 @@
-package com.jaramgroupware.auth.dto.token.controllerDto;
+package com.jaramgroupware.auth.dto.general.controllerDto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.*;
-
-import java.util.Date;
+import org.springframework.http.HttpStatus;
 
 @ToString
 @Getter
@@ -12,7 +11,9 @@ import java.util.Date;
 @NoArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-public class AccessTokenResponseControllerDto {
-    private String accessToken;
-    private Date accessTokenExpired;
+public class ExceptionMessageDto {
+    private HttpStatus status;
+    private Integer type;
+    private String title;
+    private String detail;
 }

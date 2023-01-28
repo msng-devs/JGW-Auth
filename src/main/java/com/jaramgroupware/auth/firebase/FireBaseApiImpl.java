@@ -23,7 +23,7 @@ import java.time.ZoneId;
 @Slf4j
 @RequiredArgsConstructor
 @Component
-public class FireBaseAPIImpl implements FireBaseAPI {
+public class FireBaseApiImpl implements FireBaseApi {
 
     private final FirebaseAuth firebaseAuth;
 
