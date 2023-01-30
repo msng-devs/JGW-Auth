@@ -10,6 +10,7 @@ import java.util.Date;
 @ToString
 @Getter
 @AllArgsConstructor
+@EqualsAndHashCode
 @NoArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)

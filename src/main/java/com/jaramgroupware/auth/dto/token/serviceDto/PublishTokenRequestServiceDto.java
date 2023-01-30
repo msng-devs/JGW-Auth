@@ -7,6 +7,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EqualsAndHashCode
 public class PublishTokenRequestServiceDto {
     private String userUID;
     private Integer roleID;

@@ -1,0 +1,10 @@
+= JGW Auth API
+Rest Api Docs
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 1
+:sectlinks:
+
+//include::Objects.adoc[]

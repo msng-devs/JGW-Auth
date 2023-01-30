@@ -10,10 +10,10 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EqualsAndHashCode
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class ExceptionMessageDto {
     private HttpStatus status;
-    private Integer type;
     private String title;
     private String detail;
 }

@@ -29,12 +29,13 @@ import java.util.Date;
 
 @Slf4j
 @RequiredArgsConstructor
-@RestController("/api/v2/auth")
+@RequestMapping("/api/v2/auth")
+@RestController
 public class AuthApiController {
 
-    private TokenServiceImpl tokenService;
-    private MemberServiceImpl memberService;
-    private FireBaseApiImpl fireBaseApi;
+    private final TokenServiceImpl tokenService;
+    private final MemberServiceImpl memberService;
+    private final FireBaseApiImpl fireBaseApi;
 
     @Value("${jwt-key}")
     private String jwtSecret;

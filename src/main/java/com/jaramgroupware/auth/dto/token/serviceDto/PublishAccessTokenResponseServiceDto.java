@@ -10,6 +10,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EqualsAndHashCode
 public class PublishAccessTokenResponseServiceDto {
     private String accessToken;
     private Date accessTokenExpired;

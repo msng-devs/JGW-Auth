@@ -58,7 +58,9 @@ dependencies {
 
     //docs
     asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
-    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+    // https://mvnrepository.com/artifact/org.springframework.restdocs/spring-restdocs-mockmvc
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc:3.0.0'
+
 
     //firebase
     implementation 'com.google.firebase:firebase-admin:9.0.0'
@@ -66,11 +68,11 @@ dependencies {
     //testing
     runtimeOnly 'com.h2database:h2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0-RC1'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.0-RC1'
-    testImplementation 'org.junit.vintage:junit-vintage-engine:5.8.2'
-    testImplementation 'org.mockito:mockito-core:4.6.1'
-    testImplementation 'org.mockito:mockito-junit-jupiter:4.6.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.junit.vintage:junit-vintage-engine'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
     testImplementation 'it.ozimov:embedded-redis:0.7.3'
 
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-logging
