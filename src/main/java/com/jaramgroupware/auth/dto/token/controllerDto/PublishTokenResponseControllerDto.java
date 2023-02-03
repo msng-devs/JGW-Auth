@@ -14,7 +14,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-public class TokenResponseControllerDto {
+public class PublishTokenResponseControllerDto {
     private String accessToken;
     private Date accessTokenExpired;
     private Date refreshTokenExpired;

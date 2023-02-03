@@ -78,8 +78,9 @@ dependencies {
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-logging
     implementation 'org.springframework.boot:spring-boot-starter-logging:3.0.2'
 
-    // https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-api
-    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    // https://mvnrepository.com/artifact/com.auth0/java-jwt
+    implementation 'com.auth0:java-jwt:4.2.2'
+
 
 }
 

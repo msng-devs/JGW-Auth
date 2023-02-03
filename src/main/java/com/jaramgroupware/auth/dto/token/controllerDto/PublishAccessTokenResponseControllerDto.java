@@ -14,7 +14,8 @@ import java.util.Date;
 @Builder
 @EqualsAndHashCode
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-public class AccessTokenResponseControllerDto {
+public class PublishAccessTokenResponseControllerDto {
+
     private String accessToken;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")

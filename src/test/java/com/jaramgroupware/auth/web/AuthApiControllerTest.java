@@ -16,6 +16,7 @@ import com.jaramgroupware.auth.service.MemberServiceImpl;
 import com.jaramgroupware.auth.service.TokenServiceImpl;
 import com.jaramgroupware.auth.testConfig.Jackson2ObjectTestConfig;
 import com.jaramgroupware.auth.testUtils.TestUtils;
+import jakarta.servlet.http.Cookie;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -65,6 +67,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(Jackson2ObjectTestConfig.class)
 @WebMvcTest(AuthApiController.class)
 class AuthApiControllerTest {
+
+    @Value("${jwt-key}")
+    private String jwtSecret;
 
     @Autowired
     private MockMvc mvc;
@@ -271,7 +276,82 @@ class AuthApiControllerTest {
     }
 
     @Test
-    void publishAccessToken() {
+    @Description("publishAccessToken - 올바른 refresh token이 ㅇ")
+    void publishAccessToken() throws Exception {
+        //given
+        var now = new Date();
+        var testAccessExpired = new Date(now.getTime() + Duration.ofHours(1).toMillis());
+        var testRefreshExpired = new Date(now.getTime() + Duration.ofDays(1).toMillis());
+
+        var testUser = testUtils.getTestMember();
+
+        var testRefreshToken = Jwts.builder()
+                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
+                .setIssuer("jaram_refresh")
+                .setIssuedAt(now)
+                .setExpiration(testRefreshExpired)
+                .claim("uid", testUser.getId())
+                .claim("email", testUser.getEmail())
+                .claim("role",testUser.getRole())
+                .signWith(SignatureAlgorithm.HS256, jwtSecret)
+                .compact();
+
+        var testAccessToken = Jwts.builder()
+                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
+                .setIssuer("jaram_access")
+                .setIssuedAt(now)
+                .setExpiration(testAccessExpired)
+                .claim("uid", testUser.getId())
+                .claim("email", testUser.getEmail())
+                .claim("role",testUser.getRole())
+                .signWith(SignatureAlgorithm.HS256, jwtSecret)
+                .compact();
+
+        var testPublishTokenRequestServiceDto = PublishTokenRequestServiceDto
+                .builder()
+                .email(testUser.getEmail())
+                .roleID(testUser.getRole())
+                .email(testUser.getEmail())
+                .build();
+
+        var testAccessTokenInfo = PublishTokenResponseServiceDto.builder()
+                .accessToken(testAccessToken)
+                .accessTokenExpired(testAccessExpired)
+                .refreshToken(null)
+                .refreshTokenExpired(null)
+                .build();
+
+        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+
+        doReturn(testUser.getId()).when(tokenService).checkRefreshToken(testRefreshToken);
+        doReturn(testAccessTokenInfo).when(tokenService).publishAccessToken(testPublishTokenRequestServiceDto);
+
+
+        //when
+        ResultActions result = mvc.perform(
+                post("/api/v2/auth/accessToken")
+                        .cookie(cookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("accessToken-success",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("access_token").description("신규 발급된 AccessToken"),
+                                fieldWithPath("access_token_expired").description("발급된 AccessToken의 유효시간")
+
+                        )
+                ));
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.access_token").value(testAccessToken))
+                .andExpect(jsonPath("$.access_token_expired").value(testAccessExpired));
+        verify(tokenService).checkRefreshToken(testRefreshToken);
+        verify(tokenService).publishAccessToken(testPublishTokenRequestServiceDto);
     }
 
     @Test

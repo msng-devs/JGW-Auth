@@ -46,3 +46,4 @@ logback-test.xml
 *.sql
 
 firebase.json
+*.der

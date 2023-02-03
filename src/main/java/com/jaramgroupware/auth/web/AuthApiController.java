@@ -1,31 +1,28 @@
 package com.jaramgroupware.auth.web;
 
+import com.auth0.jwt.exceptions.JWTCreationException;
 import com.jaramgroupware.auth.dto.auth.controllerDto.AuthResponseDto;
 import com.jaramgroupware.auth.dto.general.controllerDto.MessageDto;
-import com.jaramgroupware.auth.dto.member.serviceDto.MemberResponseServiceDto;
-import com.jaramgroupware.auth.dto.token.controllerDto.AccessTokenResponseControllerDto;
-import com.jaramgroupware.auth.dto.token.controllerDto.TokenResponseControllerDto;
+import com.jaramgroupware.auth.dto.token.controllerDto.PublishAccessTokenResponseControllerDto;
+import com.jaramgroupware.auth.dto.token.controllerDto.PublishTokenResponseControllerDto;
 
 
 import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenRequestServiceDto;
-import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenResponseServiceDto;
-import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthErrorCode;
 import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthException;
 import com.jaramgroupware.auth.firebase.FireBaseApiImpl;
-import com.jaramgroupware.auth.firebase.FireBaseTokenInfo;
 import com.jaramgroupware.auth.service.MemberServiceImpl;
 import com.jaramgroupware.auth.service.TokenServiceImpl;
-import io.jsonwebtoken.Jwts;
+import com.jaramgroupware.auth.utlis.jwt.JwtTokenInfo;
+import com.jaramgroupware.auth.utlis.jwt.JwtTokenVerifyInfo;
+import com.jaramgroupware.auth.utlis.jwt.TokenManagementImpl;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -36,12 +33,10 @@ public class AuthApiController {
     private final TokenServiceImpl tokenService;
     private final MemberServiceImpl memberService;
     private final FireBaseApiImpl fireBaseApi;
-
-    @Value("${jwt-key}")
-    private String jwtSecret;
+    private final TokenManagementImpl tokenManagement;
 
     @PostMapping("/authorization")
-    public ResponseEntity<TokenResponseControllerDto> authorizationIdTokenAndPublishTokens(
+    public ResponseEntity<PublishTokenResponseControllerDto> authorizationIdTokenAndPublishTokens(
             @RequestParam(value = "idToken",required = true) String idToken,
             HttpServletResponse response
     ){
@@ -62,13 +57,10 @@ public class AuthApiController {
         var tokens = tokenService.publishToken(publishTokenRequestServiceDto);
 
         //xss 방어를 위해 access token만 response body로 전달하고, refresh token은 http only cookie에 저장함.
-        var result = TokenResponseControllerDto.builder()
-                .accessToken(tokens.getAccessToken())
-                .accessTokenExpired(tokens.getAccessTokenExpired())
-                .refreshTokenExpired(tokens.getRefreshTokenExpired())
-                .build();
+        var result = tokens.toControllerDto();
 
         var refreshCookie = createHttpOnlyCookie("jgw_refresh",tokens.getRefreshToken());
+
         response.addCookie(refreshCookie);
 
         return ResponseEntity.ok(result);
@@ -76,52 +68,60 @@ public class AuthApiController {
     }
 
     @PostMapping("/accessToken")
-    public ResponseEntity<AccessTokenResponseControllerDto> publishAccessToken(
-            @CookieValue("jgw_refresh") String refreshToken,
-            @RequestHeader(value = "user_pk") String userUid
+    public ResponseEntity<PublishAccessTokenResponseControllerDto> publishAccessToken(
+            @CookieValue("jgw_refresh") String refreshToken
     ){
-
         String uid = tokenService.checkRefreshToken(refreshToken);
-        if(!isTokenValid(refreshToken) && !uid.equals(userUid)) throw new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"refresh 토큰의 유효시간이 만료되었습니다. 다시 로그인하세요");
+        JwtTokenInfo jwtTokenInfo = tokenManagement.decodeToken(refreshToken);
 
-        //TODO 토큰발행 및 검증을 종합적으로 관리하는 클래스로 분리하기
         var accessTokenInfo = tokenService.publishAccessToken(
                 PublishTokenRequestServiceDto.builder()
-                        .userUID(Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(refreshToken).getBody().get("uid",String.class))
-                        .roleID(Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(refreshToken).getBody().get("role",int.class))
-                        .email(Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(refreshToken).getBody().get("email",String.class))
+                        .userUID(jwtTokenInfo.getUid())
+                        .roleID(jwtTokenInfo.getRole())
+                        .email(jwtTokenInfo.getEmail())
                         .build());
 
-        return ResponseEntity.ok(AccessTokenResponseControllerDto.builder()
-                        .accessToken(accessTokenInfo.getAccessToken())
-                        .accessTokenExpired(accessTokenInfo.getAccessTokenExpired())
-                        .build());
+        return ResponseEntity.ok(accessTokenInfo.toControllerDto());
     }
 
     @DeleteMapping("/revoke")
-    public ResponseEntity<MessageDto> publishAccessToken(
+    public ResponseEntity<MessageDto> revokeTokens(
             @CookieValue("jgw_refresh") String refreshToken,
             @RequestParam(value = "accessToken") String accessToken,
-            @RequestHeader(value = "user_pk") String userUid
-    ){
+            HttpServletResponse response){
 
-        boolean isRefreshTokenRevoke = false;
-        boolean isAccessTokenRevoke = false;
+        JwtTokenInfo refreshTokenInfo;
 
-        String refreshTokenUID = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(refreshToken).getBody().get("uid",String.class);
-        String accessTokenUID = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(accessToken).getBody().get("uid",String.class);
-
-        if(isTokenValid(refreshToken) && userUid.equals(refreshTokenUID)) isRefreshTokenRevoke = tokenService.revokeRefreshToken(refreshToken);
-
-        if(isTokenValid(accessTokenUID) && userUid.equals(accessToken)){
-            Date expireTime = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(accessToken).getBody().getExpiration();
-            isAccessTokenRevoke = tokenService.revokeAccessToken(accessToken,accessTokenUID,expireTime);
+        try {
+            refreshTokenInfo = tokenManagement.verifyToken(refreshToken,false);
+        } catch (JGWAuthException | JWTCreationException | AssertionError exception){
+            return ResponseEntity.badRequest().body(new MessageDto("유효하지 않은 토큰입니다."));
         }
 
-        if(isAccessTokenRevoke&&isRefreshTokenRevoke) return ResponseEntity.ok(new MessageDto("성공적으로 모든 토큰이 취소되었습니다."));
-        if(isAccessTokenRevoke||isRefreshTokenRevoke) return ResponseEntity.status(HttpStatusCode.valueOf(203)).body(new MessageDto("일부 유효하지 않은 토큰을 제외하고 처리를 완료했습니다."));
+        //기존에 저장된 refresh 토큰은 제거한다.
+        var cookie = createHttpOnlyCookie("jgw_refresh",null);
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
 
-        return ResponseEntity.badRequest().body(new MessageDto("입력받은 토큰들이 유효하지 않습니다."));
+        //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
+        try {
+            JwtTokenInfo accessTokenInfo = tokenManagement.verifyToken(accessToken,
+                    JwtTokenVerifyInfo.builder()
+                            .uid(refreshTokenInfo.getUid())
+                            .email(refreshTokenInfo.getEmail())
+                            .isAccessToken(true)
+                            .build());
+
+            tokenService.revokeAccessToken(accessToken,accessTokenInfo.getUid(),accessTokenInfo.getExpiredAt());
+
+        } catch (JGWAuthException | JWTCreationException | AssertionError exception){
+
+            //위 refresh token은 성공적으로 삭제한 상황이므로, 203을 리턴한다.
+            return ResponseEntity.status(203).body(new MessageDto("일부 토큰을 성공적으로 취소 했습니다."));
+        }
+
+
+        return ResponseEntity.ok(new MessageDto("성공적으로 모든 토큰을 삭제했습니다."));
 
     }
 
@@ -129,31 +129,15 @@ public class AuthApiController {
     public ResponseEntity<AuthResponseDto> checkToken(
             @RequestParam(value = "accessToken") String accessToken){
 
+        JwtTokenInfo jwtTokenInfo = tokenManagement.decodeToken(accessToken);
         boolean isNotBlocked = tokenService.checkAccessToken(accessToken);
-        
-        if(!isNotBlocked) 
-            return ResponseEntity.ok(AuthResponseDto.builder()
-                .uid(null)
-                .valid(false)
-                .roleID(null)
-                .build());
 
-        //TODO 토큰발행 및 검증을 종합적으로 관리하는 클래스로 분리하기
         return ResponseEntity.ok(
                 AuthResponseDto.builder()
-                        .uid(Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(accessToken).getBody().get("uid",String.class))
-                        .roleID(Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(accessToken).getBody().get("role",Integer.class))
-                        .valid(true)
+                        .uid(jwtTokenInfo.getUid())
+                        .roleID(jwtTokenInfo.getRole())
+                        .valid(isNotBlocked)
                         .build());
-    }
-
-    private boolean isTokenValid(String token){
-
-        var now = new Date();
-        //TODO 토큰발행 및 검증을 종합적으로 관리하는 클래스로 분리하기
-        Date expireTime = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody().getExpiration();
-        return now.after(expireTime);
-
     }
 
     private Cookie createHttpOnlyCookie(String key,String value){
