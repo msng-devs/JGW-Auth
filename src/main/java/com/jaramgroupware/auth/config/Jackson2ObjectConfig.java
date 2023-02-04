@@ -18,7 +18,7 @@ public class Jackson2ObjectConfig{
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jackson2ObjectMapperBuilderCustomizer(){
         return jacksonObjectMapperBuilder -> {
-            jacksonObjectMapperBuilder.simpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            jacksonObjectMapperBuilder.simpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         };
     }
 }

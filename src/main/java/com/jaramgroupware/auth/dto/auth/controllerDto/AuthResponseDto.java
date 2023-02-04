@@ -13,7 +13,6 @@ import lombok.*;
 @EqualsAndHashCode
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class AuthResponseDto {
-    private Boolean valid;
     private String uid;
     private Integer roleID;
 }

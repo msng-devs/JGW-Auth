@@ -30,7 +30,7 @@ import java.util.Date;
 public class TokenServiceImpl implements TokenService {
 
     private StringRedisTemplate stringRedisTemplate;
-    private TokenManagementImpl tokenManagement;
+    private TokenManagerImpl tokenManager;
 
     /**
      * 주어진 firebase id token을 남은 유효시간 만큼 block 시키는 함수
@@ -80,8 +80,8 @@ public class TokenServiceImpl implements TokenService {
                 .uid(publishTokenRequestDto.getUserUID())
                 .build();
 
-        JwtCreateTokenResult newAccessTokenInfo = tokenManagement.createToken(jwtCreateTokenInfo,true);
-        JwtCreateTokenResult newRefreshTokenInfo = tokenManagement.createToken(jwtCreateTokenInfo,false);
+        JwtCreateTokenResult newAccessTokenInfo = tokenManager.createToken(jwtCreateTokenInfo,true);
+        JwtCreateTokenResult newRefreshTokenInfo = tokenManager.createToken(jwtCreateTokenInfo,false);
 
         //오직 refresh 토큰만 유효시간 만큼 캐싱하여 저장함.
         String key = "refresh_"+newRefreshTokenInfo.getToken();
@@ -101,15 +101,15 @@ public class TokenServiceImpl implements TokenService {
 
     /**
      * 신규 accessToken을 발급하는 함수
-     * @param publishTokenRequestDto
-     * @return
+     * @param publishTokenRequestDto 발급할 AccessToken의 claim에 사용할 정보
+     * @return PublishAccessTokenResponseServiceDto 생성된 AccessToken과 만료일을 반환
      * @author 황준서(37기) hzser123@gmail.com
      */
     //TODO Token을 통합적으로 관리하는 클래스가 추가됨에 따라 해당 함수는 삭제하기
     @Override
     public PublishAccessTokenResponseServiceDto publishAccessToken(PublishTokenRequestServiceDto publishTokenRequestDto) {
 
-        JwtCreateTokenResult newAccessTokenInfo = tokenManagement.createToken(JwtCreateTokenInfo.builder()
+        JwtCreateTokenResult newAccessTokenInfo = tokenManager.createToken(JwtCreateTokenInfo.builder()
                 .email(publishTokenRequestDto.getEmail())
                 .role(publishTokenRequestDto.getRoleID())
                 .uid(publishTokenRequestDto.getUserUID())
@@ -163,6 +163,7 @@ public class TokenServiceImpl implements TokenService {
      * 해당 access token이 block 됬는지 확인하는 함수
      * @param accessToken 확인할 access token
      * @return true라면 block 되지 않는 토큰임
+     * @throws JGWAuthException 만약 block된 token이라면 NOT_VALID_TOKEN 발생
      * @author 황준서(37기) hzser123@gmail.com
      */
     @Override
@@ -170,13 +171,17 @@ public class TokenServiceImpl implements TokenService {
         ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
         String key = "block_access_token_" + accessToken;
         String result = valueOperations.get(key);
-        return result == null;
+
+        if(result != null) throw new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"사용 불가능한 토큰입니다. 다시 로그인해주세요.");
+
+        return true;
     }
 
     /**
      * 해당 refresh token이 유효한지 확인하는 함수
      * @param refreshToken 확인할 refreshToken
-     * @return 해당 refresh token 주인의 uid, 유효하지 않다면 null 반환
+     * @throws JGWAuthException 해당 refresh token의 정보가 없으면 NOT_VALID_TOKEN를 리턴함.
+     * @return 해당 refresh token 주인의 uid를 리턴함.
      * @author 황준서(37기) hzser123@gmail.com
      */
     @Override

@@ -14,12 +14,11 @@ import com.jaramgroupware.auth.service.MemberServiceImpl;
 import com.jaramgroupware.auth.service.TokenServiceImpl;
 import com.jaramgroupware.auth.utlis.jwt.JwtTokenInfo;
 import com.jaramgroupware.auth.utlis.jwt.JwtTokenVerifyInfo;
-import com.jaramgroupware.auth.utlis.jwt.TokenManagementImpl;
+import com.jaramgroupware.auth.utlis.jwt.TokenManagerImpl;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +32,7 @@ public class AuthApiController {
     private final TokenServiceImpl tokenService;
     private final MemberServiceImpl memberService;
     private final FireBaseApiImpl fireBaseApi;
-    private final TokenManagementImpl tokenManagement;
+    private final TokenManagerImpl tokenManager;
 
     @PostMapping("/authorization")
     public ResponseEntity<PublishTokenResponseControllerDto> authorizationIdTokenAndPublishTokens(
@@ -71,12 +70,12 @@ public class AuthApiController {
     public ResponseEntity<PublishAccessTokenResponseControllerDto> publishAccessToken(
             @CookieValue("jgw_refresh") String refreshToken
     ){
+        JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(refreshToken);
         String uid = tokenService.checkRefreshToken(refreshToken);
-        JwtTokenInfo jwtTokenInfo = tokenManagement.decodeToken(refreshToken);
 
         var accessTokenInfo = tokenService.publishAccessToken(
                 PublishTokenRequestServiceDto.builder()
-                        .userUID(jwtTokenInfo.getUid())
+                        .userUID(uid)
                         .roleID(jwtTokenInfo.getRole())
                         .email(jwtTokenInfo.getEmail())
                         .build());
@@ -93,7 +92,7 @@ public class AuthApiController {
         JwtTokenInfo refreshTokenInfo;
 
         try {
-            refreshTokenInfo = tokenManagement.verifyToken(refreshToken,false);
+            refreshTokenInfo = tokenManager.verifyToken(refreshToken,false);
         } catch (JGWAuthException | JWTCreationException | AssertionError exception){
             return ResponseEntity.badRequest().body(new MessageDto("유효하지 않은 토큰입니다."));
         }
@@ -105,7 +104,7 @@ public class AuthApiController {
 
         //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
         try {
-            JwtTokenInfo accessTokenInfo = tokenManagement.verifyToken(accessToken,
+            JwtTokenInfo accessTokenInfo = tokenManager.verifyToken(accessToken,
                     JwtTokenVerifyInfo.builder()
                             .uid(refreshTokenInfo.getUid())
                             .email(refreshTokenInfo.getEmail())
@@ -129,14 +128,13 @@ public class AuthApiController {
     public ResponseEntity<AuthResponseDto> checkToken(
             @RequestParam(value = "accessToken") String accessToken){
 
-        JwtTokenInfo jwtTokenInfo = tokenManagement.decodeToken(accessToken);
-        boolean isNotBlocked = tokenService.checkAccessToken(accessToken);
+        JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(accessToken);
+        tokenService.checkAccessToken(accessToken);
 
         return ResponseEntity.ok(
                 AuthResponseDto.builder()
                         .uid(jwtTokenInfo.getUid())
                         .roleID(jwtTokenInfo.getRole())
-                        .valid(isNotBlocked)
                         .build());
     }
 

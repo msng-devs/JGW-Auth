@@ -17,7 +17,5 @@ import java.util.Date;
 public class PublishAccessTokenResponseControllerDto {
 
     private String accessToken;
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private Date accessTokenExpired;
 }

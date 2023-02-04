@@ -1,9 +1,8 @@
 package com.jaramgroupware.auth.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jaramgroupware.auth.dto.member.serviceDto.MemberResponseServiceDto;
+import com.jaramgroupware.auth.dto.token.serviceDto.PublishAccessTokenResponseServiceDto;
 import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenRequestServiceDto;
 import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenResponseServiceDto;
 import com.jaramgroupware.auth.exceptions.firebase.FireBaseErrorCode;
@@ -14,46 +13,39 @@ import com.jaramgroupware.auth.firebase.FireBaseApiImpl;
 import com.jaramgroupware.auth.firebase.FireBaseTokenInfo;
 import com.jaramgroupware.auth.service.MemberServiceImpl;
 import com.jaramgroupware.auth.service.TokenServiceImpl;
-import com.jaramgroupware.auth.testConfig.Jackson2ObjectTestConfig;
+import com.jaramgroupware.auth.testConfig.TestJackson2ObjectConfig;
+import com.jaramgroupware.auth.testConfig.TestRSAConfig;
 import com.jaramgroupware.auth.testUtils.TestUtils;
+import com.jaramgroupware.auth.utlis.jwt.JwtTokenInfo;
+import com.jaramgroupware.auth.utlis.jwt.TokenManagerImpl;
 import jakarta.servlet.http.Cookie;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Description;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.restdocs.cookies.CookieDescriptor;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.restdocs.cookies.CookieDocumentation.responseCookies;
@@ -64,15 +56,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ComponentScan
 @AutoConfigureRestDocs(uriScheme = "https", uriHost = "docs.jaram.api")
 @AutoConfigureMockMvc
-@Import(Jackson2ObjectTestConfig.class)
+@Import({TestRSAConfig.class, TestJackson2ObjectConfig.class})
 @WebMvcTest(AuthApiController.class)
 class AuthApiControllerTest {
 
-    @Value("${jwt-key}")
-    private String jwtSecret;
-
     @Autowired
     private MockMvc mvc;
+
+    @MockBean
+    private TokenManagerImpl tokenManager;
 
     @MockBean
     private TokenServiceImpl tokenService;
@@ -86,7 +78,7 @@ class AuthApiControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final TestUtils testUtils = new TestUtils();
-
+    private final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     @BeforeEach
     void setUp() {
 
@@ -115,7 +107,7 @@ class AuthApiControllerTest {
         var testAccessToken = "thisIsTestAccessToken";
         var testRefreshToken = "thisIsTestRefreshToken";
         var testDate = new Date();
-        var simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
         var testTokens = PublishTokenResponseServiceDto.builder()
                 .accessToken(testAccessToken)
                 .accessTokenExpired(testDate)
@@ -276,59 +268,44 @@ class AuthApiControllerTest {
     }
 
     @Test
-    @Description("publishAccessToken - 올바른 refresh token이 ㅇ")
-    void publishAccessToken() throws Exception {
+    @Description("publishAccessToken - 올바른 refresh token이라면, AccessToken을 발급한다.")
+    void testPublishAccessToken() throws Exception {
         //given
-        var now = new Date();
-        var testAccessExpired = new Date(now.getTime() + Duration.ofHours(1).toMillis());
-        var testRefreshExpired = new Date(now.getTime() + Duration.ofDays(1).toMillis());
+        var testDate = new Date();
 
-        var testUser = testUtils.getTestMember();
+        var testMember = testUtils.getTestMember();
 
-        var testRefreshToken = Jwts.builder()
-                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
-                .setIssuer("jaram_refresh")
-                .setIssuedAt(now)
-                .setExpiration(testRefreshExpired)
-                .claim("uid", testUser.getId())
-                .claim("email", testUser.getEmail())
-                .claim("role",testUser.getRole())
-                .signWith(SignatureAlgorithm.HS256, jwtSecret)
-                .compact();
-
-        var testAccessToken = Jwts.builder()
-                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
-                .setIssuer("jaram_access")
-                .setIssuedAt(now)
-                .setExpiration(testAccessExpired)
-                .claim("uid", testUser.getId())
-                .claim("email", testUser.getEmail())
-                .claim("role",testUser.getRole())
-                .signWith(SignatureAlgorithm.HS256, jwtSecret)
-                .compact();
-
-        var testPublishTokenRequestServiceDto = PublishTokenRequestServiceDto
+        var jwtTokenInfo = JwtTokenInfo
                 .builder()
-                .email(testUser.getEmail())
-                .roleID(testUser.getRole())
-                .email(testUser.getEmail())
+                .isAccessToken(false)
+                .email(testMember.getEmail())
+                .uid(testMember.getId())
+                .expiredAt(testDate)
+                .role(testMember.getRole())
                 .build();
 
-        var testAccessTokenInfo = PublishTokenResponseServiceDto.builder()
-                .accessToken(testAccessToken)
-                .accessTokenExpired(testAccessExpired)
-                .refreshToken(null)
-                .refreshTokenExpired(null)
-                .build();
+        String testRefreshToken = "thisIsValidRefreshToken!";
+
+        String testNewAccessToken = "thisIsNewAccessToken!";
 
         var cookie = new Cookie("jgw_refresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
 
-        doReturn(testUser.getId()).when(tokenService).checkRefreshToken(testRefreshToken);
-        doReturn(testAccessTokenInfo).when(tokenService).publishAccessToken(testPublishTokenRequestServiceDto);
+        var testAccessTokenResult = PublishAccessTokenResponseServiceDto.builder()
+                .accessToken(testNewAccessToken)
+                .accessTokenExpired(testDate)
+                .build();
 
+        doReturn(testMember.getId()).when(tokenService).checkRefreshToken(testRefreshToken);
+        doReturn(jwtTokenInfo).when(tokenManager).decodeToken(testRefreshToken);
+        doReturn(testAccessTokenResult).when(tokenService).publishAccessToken(
+                PublishTokenRequestServiceDto.builder()
+                        .userUID(jwtTokenInfo.getUid())
+                        .roleID(jwtTokenInfo.getRole())
+                        .email(jwtTokenInfo.getEmail())
+                        .build());
 
         //when
         ResultActions result = mvc.perform(
@@ -348,17 +325,145 @@ class AuthApiControllerTest {
                 ));
         //then
         result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").value(testAccessToken))
-                .andExpect(jsonPath("$.access_token_expired").value(testAccessExpired));
+                .andExpect(jsonPath("$.access_token").value(testNewAccessToken))
+                .andExpect(jsonPath("$.access_token_expired").value(simpleDateFormat.format(testDate)));
+
         verify(tokenService).checkRefreshToken(testRefreshToken);
-        verify(tokenService).publishAccessToken(testPublishTokenRequestServiceDto);
+        verify(tokenManager).decodeToken(testRefreshToken);
+        verify(tokenService).publishAccessToken(
+                PublishTokenRequestServiceDto.builder()
+                        .userUID(jwtTokenInfo.getUid())
+                        .roleID(jwtTokenInfo.getRole())
+                        .email(jwtTokenInfo.getEmail())
+                        .build());
     }
 
     @Test
-    void testPublishAccessToken() {
+    @Description("publishAccessToken - DB에 존재하지 않는 refresh token이라면,NOT_VALID_TOKEN을 리턴한다.")
+    void testPublishAccessToken2() throws Exception {
+        //given
+        String testRefreshToken = "thisIsValidRefreshToken!";
+
+        var testDate = new Date();
+
+        var testMember = testUtils.getTestMember();
+
+        var jwtTokenInfo = JwtTokenInfo
+                .builder()
+                .isAccessToken(false)
+                .email(testMember.getEmail())
+                .uid(testMember.getId())
+                .expiredAt(testDate)
+                .role(testMember.getRole())
+                .build();
+
+
+        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+
+        doReturn(jwtTokenInfo).when(tokenManager).decodeToken(testRefreshToken);
+        doThrow(new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"주어진 refresh 토큰이 유효하지 않습니다. 다시 로그인해주세요.")).when(tokenService).checkRefreshToken(testRefreshToken);
+
+        //when
+        ResultActions result = mvc.perform(
+                post("/api/v2/auth/accessToken")
+                        .cookie(cookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("accessToken-fail-NOT_VALID_TOKEN",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("status").description("HTTP code"),
+                                fieldWithPath("title").description("오류 제목"),
+                                fieldWithPath("detail").description("오류 상세 설명")
+
+                        )
+                ));
+        //then
+        result.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value(JGWAuthErrorCode.NOT_VALID_TOKEN.getTitle()));
+        verify(tokenService).checkRefreshToken(testRefreshToken);
     }
 
     @Test
-    void checkToken() {
+    @Description("publishAccessToken - 해당 refresh token이 valid 하지 않다면,NOT_VALID_TOKEN을 리턴한다.")
+    void testPublishAccessToken3() throws Exception {
+        //given
+        String testRefreshToken = "thisIsValidRefreshToken!";
+
+
+        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+
+        doThrow(new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"주어진 refresh 토큰이 유효하지 않습니다. 다시 로그인해주세요.")).when(tokenManager).decodeToken(testRefreshToken);
+
+        //when
+        ResultActions result = mvc.perform(
+                post("/api/v2/auth/accessToken")
+                        .cookie(cookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("accessToken-fail-NOT_VALID_TOKEN2",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("status").description("HTTP code"),
+                                fieldWithPath("title").description("오류 제목"),
+                                fieldWithPath("detail").description("오류 상세 설명")
+
+                        )
+                ));
+        //then
+        result.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value(JGWAuthErrorCode.NOT_VALID_TOKEN.getTitle()));
+        verify(tokenManager).decodeToken(testRefreshToken);
+    }
+
+    @Test
+    @Description("checkToken - valid한 accessToken이 주어졌다면, 해당 인증 정보를 리턴한다.")
+    void testCheckToken() throws Exception {
+        //given
+        String testAccessToken = "thisIs.ValidAccess.Token";
+        var testDate = new Date();
+        var testMember = testUtils.getTestMember();
+        var jwtTokenInfo = JwtTokenInfo
+                .builder()
+                .isAccessToken(false)
+                .email(testMember.getEmail())
+                .uid(testMember.getId())
+                .expiredAt(testDate)
+                .role(testMember.getRole())
+                .build();
+
+        doReturn(jwtTokenInfo).when(tokenManager).decodeToken(testAccessToken);
+        //when
+        ResultActions result = mvc.perform(
+                get("/api/v2/auth/checkAccessToken")
+                        .queryParam("accessToken",testAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("checkAccessToken-success",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("uid").description("해당 토큰 소유자의 uid"),
+                                fieldWithPath("role_id").description("해당 토큰의 role 정보")
+
+                        )
+                ));
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.uid").value(testMember.getId()))
+                .andExpect(jsonPath("$.role_id").value(testMember.getRole()));
+        verify(tokenManager).decodeToken(testAccessToken);
+        verify(tokenService).checkAccessToken(testAccessToken);
     }
 }
