@@ -40,7 +40,6 @@ public class FireBaseConfig {
 
     @Bean
     public FirebaseAuth getFirebaseAuth() throws IOException {
-        FirebaseAuth firebaseAuth = FirebaseAuth.getInstance(firebaseApp());
-        return firebaseAuth;
+        return FirebaseAuth.getInstance(firebaseApp());
     }
 }
