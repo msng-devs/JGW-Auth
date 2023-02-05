@@ -8,6 +8,8 @@ import com.auth0.jwt.interfaces.JWTVerifier;
 import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthErrorCode;
 import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,11 +26,15 @@ import java.util.Date;
  * @since 2023-01-27
  * @author 황준서(37기) hzser123@gmail.com
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class TokenManagerImpl implements TokenManager {
 
+    @Qualifier("RSAPublicKey")
     private final PublicKey publicKey;
+
+    @Qualifier("RSAPrivateKey")
     private final PrivateKey privateKey;
 
     @Value("${jwt-refreshToken.expired}")

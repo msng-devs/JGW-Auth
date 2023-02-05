@@ -9,7 +9,7 @@ import com.jaramgroupware.auth.firebase.FireBaseTokenInfo;
 import com.jaramgroupware.auth.utlis.jwt.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,8 +29,9 @@ import java.util.Date;
 @Service
 public class TokenServiceImpl implements TokenService {
 
-    private StringRedisTemplate stringRedisTemplate;
-    private TokenManagerImpl tokenManager;
+
+    private final RedisTemplate<String,String> redisTemplate;
+    private final TokenManagerImpl tokenManager;
 
     /**
      * 주어진 firebase id token을 남은 유효시간 만큼 block 시키는 함수
@@ -41,10 +42,10 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public boolean blockFirebaseIdToken(FireBaseTokenInfo fireBaseTokenInfo) {
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String key = "firebase_"+fireBaseTokenInfo.getIdToken();
         valueOperations.set(key, fireBaseTokenInfo.getUid());
-        stringRedisTemplate.expire(key, Duration.ofSeconds(Duration.between(fireBaseTokenInfo.getExpireDateTime(), LocalDateTime.now()).toSeconds()));
+        redisTemplate.expire(key, Duration.ofSeconds(Duration.between(fireBaseTokenInfo.getExpireDateTime(), LocalDateTime.now()).toSeconds()));
         return true;
     }
 
@@ -56,7 +57,7 @@ public class TokenServiceImpl implements TokenService {
      */
     @Override
     public boolean checkFirebaseIdToken(String fireBaseToken) {
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String key = "firebase_"+fireBaseToken;
         String result = valueOperations.get(key);
 
@@ -86,9 +87,9 @@ public class TokenServiceImpl implements TokenService {
         //오직 refresh 토큰만 유효시간 만큼 캐싱하여 저장함.
         String key = "refresh_"+newRefreshTokenInfo.getToken();
 
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         valueOperations.set(key,publishTokenRequestDto.getUserUID());
-        stringRedisTemplate.expire(key,Duration.ofSeconds(
+        redisTemplate.expire(key,Duration.ofSeconds(
                 Duration.between(now,newRefreshTokenInfo.getExpiredAt().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()).toSeconds()
         ));
 
@@ -130,10 +131,10 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional
     public Boolean revokeAccessToken(String accessToken,String uid,Date expiredDate) {
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String key = "block_access_token_" + accessToken;
         valueOperations.set(key,uid);
-        stringRedisTemplate.expire(key,Duration.ofSeconds(Duration.between(LocalDateTime.now(), expiredDate.toInstant()   // Date -> Instant
+        redisTemplate.expire(key,Duration.ofSeconds(Duration.between(LocalDateTime.now(), expiredDate.toInstant()   // Date -> Instant
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime()).toSeconds()));
         return true;
@@ -148,14 +149,14 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public Boolean revokeRefreshToken(String refreshToken) {
         String key = "refresh_"+refreshToken;
-        return stringRedisTemplate.delete(key);
+        return redisTemplate.delete(key);
     }
 
     @Override
     @Transactional
     public Boolean revokeUserToken(String userUID) {
         //TODO userUID로 모든 refresh token 삭제 로직 추가
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         return null;
     }
 
@@ -168,7 +169,7 @@ public class TokenServiceImpl implements TokenService {
      */
     @Override
     public boolean checkAccessToken(String accessToken) {
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String key = "block_access_token_" + accessToken;
         String result = valueOperations.get(key);
 
@@ -186,7 +187,7 @@ public class TokenServiceImpl implements TokenService {
      */
     @Override
     public String checkRefreshToken(String refreshToken) {
-        ValueOperations<String,String> valueOperations = stringRedisTemplate.opsForValue();
+        ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
         String key = "refresh_" + refreshToken;
         String result = valueOperations.get(key);
 

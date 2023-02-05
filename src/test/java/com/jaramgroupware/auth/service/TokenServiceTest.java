@@ -17,14 +17,13 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Description;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -40,7 +39,7 @@ class TokenServiceTest {
     private TokenManagerImpl tokenManager;
 
     @Mock
-    private StringRedisTemplate stringRedisTemplate;
+    private  RedisTemplate<String,String> redisTemplate;
 
     private final TestUtils testUtils = new TestUtils();
 
@@ -56,15 +55,15 @@ class TokenServiceTest {
                 .idToken("testidtoken")
                 .build();
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
 
         //when
         boolean result = tokenService.blockFirebaseIdToken(testInfo);
 
         //then
-        verify(stringRedisTemplate).opsForValue();
+        verify(redisTemplate).opsForValue();
         verify(valueOperations).set("firebase_"+testInfo.getIdToken(),testInfo.getUid());
-        verify(stringRedisTemplate).expire("firebase_"+testInfo.getIdToken(), Duration.ofSeconds(Duration.between(testInfo.getExpireDateTime(), LocalDateTime.now()).toSeconds()));
+        verify(redisTemplate).expire("firebase_"+testInfo.getIdToken(), Duration.ofSeconds(Duration.between(testInfo.getExpireDateTime(), LocalDateTime.now()).toSeconds()));
         assertTrue(result);
     }
 
@@ -74,13 +73,13 @@ class TokenServiceTest {
         //given
         String testIdToken = "testidtoken";
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(null).when(valueOperations).get( "firebase_"+testIdToken);
         //when
         boolean result = tokenService.checkFirebaseIdToken(testIdToken);
 
         //then
-        verify(stringRedisTemplate).opsForValue();
+        verify(redisTemplate).opsForValue();
         verify(valueOperations).get("firebase_"+testIdToken);
         assertTrue(result);
     }
@@ -91,13 +90,13 @@ class TokenServiceTest {
         //given
         String testIdToken = "testidtoken";
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn("thisisUserUid").when(valueOperations).get( "firebase_"+testIdToken);
         //when
         boolean result = tokenService.checkFirebaseIdToken(testIdToken);
 
         //then
-        verify(stringRedisTemplate).opsForValue();
+        verify(redisTemplate).opsForValue();
         verify(valueOperations).get("firebase_"+testIdToken);
         assertFalse(result);
     }
@@ -133,7 +132,7 @@ class TokenServiceTest {
 
         doReturn(JwtCreateTokenResult.builder().token(testAccessToken).expiredAt(testExpiredAt).build()).when(tokenManager).createToken(jwtCreateTokenInfo,true);
         doReturn(JwtCreateTokenResult.builder().token(testRefreshToken).expiredAt(testExpiredAt).build()).when(tokenManager).createToken(jwtCreateTokenInfo,false);
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
 
         //when
         var testResult = tokenService.publishToken(testRequest);
@@ -142,9 +141,9 @@ class TokenServiceTest {
         assertEquals(testExceptedResult,testResult);
         verify(tokenManager).createToken(jwtCreateTokenInfo,true);
         verify(tokenManager).createToken(jwtCreateTokenInfo,false);
-        verify(stringRedisTemplate).opsForValue();
+        verify(redisTemplate).opsForValue();
         verify(valueOperations).set("refresh_"+testRefreshToken,testMember.getId());
-        verify(stringRedisTemplate).expire("refresh_"+testRefreshToken,Duration.ofSeconds(99));
+        verify(redisTemplate).expire("refresh_"+testRefreshToken,Duration.ofSeconds(99));
 
     }
     @Test
@@ -190,13 +189,13 @@ class TokenServiceTest {
         var testUid = testUtils.getTestUid();
         var testExpiredAt = new Date(new Date().getTime() + Duration.ofSeconds(100).toMillis());
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         //when
         var testResult = tokenService.revokeAccessToken(testAccessToken,testUid,testExpiredAt);
         //then
         assertTrue(testResult);
         verify(valueOperations).set("block_access_token_"+testAccessToken,testUid);
-        verify(stringRedisTemplate).expire("block_access_token_"+testAccessToken,Duration.ofSeconds(99));
+        verify(redisTemplate).expire("block_access_token_"+testAccessToken,Duration.ofSeconds(99));
     }
 
     @Test
@@ -204,12 +203,12 @@ class TokenServiceTest {
     void revokeRefreshToken() {
         //given
         String testRefreshToken = "thisIsTestRefreshToken";
-        doReturn(true).when(stringRedisTemplate).delete("refresh_"+testRefreshToken);
+        doReturn(true).when(redisTemplate).delete("refresh_"+testRefreshToken);
         //when
         var testResult = tokenService.revokeRefreshToken(testRefreshToken);
         //then
         assertTrue(testResult);
-        verify(stringRedisTemplate).delete("refresh_"+testRefreshToken);
+        verify(redisTemplate).delete("refresh_"+testRefreshToken);
     }
 
     @Test
@@ -223,14 +222,14 @@ class TokenServiceTest {
         //given
         var testAccessToken = "thisIsTestAccessToken!";
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(null).when(valueOperations).get("block_access_token_"+testAccessToken);
         //when
         var testResult = tokenService.checkAccessToken(testAccessToken);
 
         //then
         assertTrue(testResult);
-        verify(stringRedisTemplate).opsForValue();
+        verify(redisTemplate).opsForValue();
         verify(valueOperations).get("block_access_token_"+testAccessToken);
 
     }
@@ -241,7 +240,7 @@ class TokenServiceTest {
         //given
         var testAccessToken = "thisIsTestAccessToken!";
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(testUtils.getTestUid()).when(valueOperations).get("block_access_token_"+testAccessToken);
 
         //when
@@ -256,14 +255,14 @@ class TokenServiceTest {
         //given
         var testRefresh = "thisIsTestRefreshToken!";
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(testUtils.getTestUid()).when(valueOperations).get("refresh_"+testRefresh);
         //when
         var testResult = tokenService.checkRefreshToken(testRefresh);
 
         //then
         assertEquals(testUtils.getTestUid(),testResult);
-        verify(stringRedisTemplate).opsForValue();
+        verify(redisTemplate).opsForValue();
         verify(valueOperations).get("refresh_"+testRefresh);
     }
 
@@ -273,7 +272,7 @@ class TokenServiceTest {
         //given
         var testRefresh = "thisIsTestRefreshToken!";
 
-        doReturn(valueOperations).when(stringRedisTemplate).opsForValue();
+        doReturn(valueOperations).when(redisTemplate).opsForValue();
         doReturn(null).when(valueOperations).get("refresh_"+testRefresh);
 
         //when

@@ -1,9 +1,6 @@
 package com.jaramgroupware.auth.firebase;
 
-import com.google.firebase.auth.AuthErrorCode;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.*;
 import com.jaramgroupware.auth.exceptions.firebase.FireBaseErrorCode;
 import com.jaramgroupware.auth.exceptions.firebase.FirebaseApiException;
 import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthErrorCode;
@@ -96,4 +93,11 @@ public class FireBaseApiImpl implements FireBaseApi {
         }
     }
 
+    public void indexUserMakeEmail(String idToken) throws FirebaseAuthException {
+        FirebaseToken result = firebaseAuth.verifyIdToken(idToken,true);
+        UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(result.getUid())
+                .setEmailVerified(true);
+
+        firebaseAuth.updateUser(request);
+    }
 }

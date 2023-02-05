@@ -17,6 +17,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -27,6 +28,15 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler({ MissingRequestCookieException.class })
+    protected ResponseEntity<ExceptionMessageDto> handleMissingRequestCookieException(MissingRequestCookieException exception, WebRequest request) {
+        log.info("Path : {} -> Throw MissingRequestCookieException.",request.getContextPath());
+        return ResponseEntity.badRequest().body(ExceptionMessageDto.builder()
+                .status(HttpStatus.BAD_REQUEST)
+                .title("refresh token이 없습니다!")
+                .detail("해당 요청에서 refresh token이 누락되었습니다. 다시 로그인해주세요")
+                .build());
+    }
     @ExceptionHandler({ HttpMediaTypeNotSupportedException.class })
     protected ResponseEntity<ExceptionMessageDto> handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException exception, WebRequest request) {
         log.info("Path : {} -> Throw HttpMediaTypeNotSupportedException.",request.getContextPath());

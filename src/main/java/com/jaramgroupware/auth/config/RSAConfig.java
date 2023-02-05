@@ -22,7 +22,7 @@ import java.security.spec.X509EncodedKeySpec;
 @Configuration
 public class RSAConfig {
 
-    @Bean
+    @Bean(name="RSAPrivateKey")
     public PrivateKey privateKey() throws Exception {
 
         byte[] keyBytes = new ClassPathResource("private_key.der").getInputStream().readAllBytes();
@@ -33,7 +33,7 @@ public class RSAConfig {
         return kf.generatePrivate(spec);
     }
 
-    @Bean
+    @Bean(name="RSAPublicKey")
     public PublicKey publicKey() throws Exception {
 
         byte[] keyBytes =new ClassPathResource("public_key.der").getInputStream().readAllBytes();
