@@ -135,7 +135,7 @@ public class TokenServiceImpl implements TokenService {
         valueOperations.set(key,uid);
         stringRedisTemplate.expire(key,Duration.ofSeconds(Duration.between(LocalDateTime.now(), expiredDate.toInstant()   // Date -> Instant
                 .atZone(ZoneId.systemDefault())
-                .toLocalDate()).toSeconds()));
+                .toLocalDateTime()).toSeconds()));
         return true;
     }
 

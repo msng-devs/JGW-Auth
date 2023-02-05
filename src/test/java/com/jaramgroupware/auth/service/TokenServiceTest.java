@@ -144,7 +144,7 @@ class TokenServiceTest {
         verify(tokenManager).createToken(jwtCreateTokenInfo,false);
         verify(stringRedisTemplate).opsForValue();
         verify(valueOperations).set("refresh_"+testRefreshToken,testMember.getId());
-        verify(stringRedisTemplate).expire("refresh_"+testRefreshToken,Duration.ofSeconds(100));
+        verify(stringRedisTemplate).expire("refresh_"+testRefreshToken,Duration.ofSeconds(99));
 
     }
     @Test
@@ -196,7 +196,7 @@ class TokenServiceTest {
         //then
         assertTrue(testResult);
         verify(valueOperations).set("block_access_token_"+testAccessToken,testUid);
-        verify(stringRedisTemplate).expire("block_access_token_"+testAccessToken,Duration.ofSeconds(100));
+        verify(stringRedisTemplate).expire("block_access_token_"+testAccessToken,Duration.ofSeconds(99));
     }
 
     @Test
