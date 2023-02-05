@@ -4,7 +4,199 @@ Rest Api Docs
 :icons: font
 :source-highlighter: highlightjs
 :toc: left
-:toclevels: 1
+:toclevels: 2
 :sectlinks:
 
-//include::Objects.adoc[]
+[[Intro]]
+== 소개
+
+해당 API를 사용하여 *Firebase Id Token* 을 검증하고, 자람 그룹웨어에서 사용 가능한 *Access Token, Refresh Token* 을 발급받을 수 있습니다.
+
+*!주의 앞으로 해당 문서에서 Firebase에서 제공하는 토큰은  'Id Token' 이라고 부릅니다. 자람 그룹웨어에서 제공하는 토큰들과 혼동하지 않도록 유의하세요.*
+
+*!주의 Firebase에서 제공하는 Id Token은 단순 사용자 인증만 수행하며, 인증 후에 파기 됩니다.*
+
+*!주의 Firebase에서 제공하는 Id Token으로는 자람그룹웨어 서비스를 사용할 수 없습니다.*
+
+
+[[TokenInfo]]
+== 토큰 정보
+
+두 토큰의 유효 시간은 아래와 같습니다.
+
+[cols="1,1"]
+|===
+
+|Access Token
+|_* 30분_
+
+|Refresh Token
+|_* 30일_
+|===
+_* 각각의 토큰의 유효 시간은 해당 문서가 실제 API와 상이할 수 있습니다._
+
+해당 토큰의 claim 은 아래와 같습니다.
+
+[cols="1,1"]
+|===
+
+|Claim 명
+|설명
+
+|iss
+|해당 토큰 발급자 입니다. 'jaramgroupware' 고정입니다.
+
+|sub
+|token의 종류를 담고 있습니다. accessToken or refreshToken 입니다.
+
+|uid
+|해당 토큰을 소유한 유저의 uid 입니다.
+
+|email
+|해당 토큰을 소유한 유저의 email 입니다.
+
+|role
+|해당 토큰을 소유한 유저의 Role(role pk) 입니다.
+|===
+
+해당 토큰은 RS256 으로 암호화 되며 *None 알고리즘은 허용되지 않습니다!*
+
+기본적으로 토큰을 발급하게 되면, 해당 토큰과 유효 시간을 함께 전달합니다.
+
+다만, Access Token은 토큰과 유효시간을 그대로 전달하지만, Refresh Token은 *Secure, Http Only Cookie* 에 저장되며 유효 시간만 전달합니다.
+
+사전에 해당 유효 시간을 확인하여 Refresh token을 통해 Access Token을 발급하는 것을 권장합니다.
+
+[[api]]
+== API
+
+아래 API들을 사용하여 유저 인증 및 토큰을 관리할 수 있습니다.
+
+[[authorization]]
+=== 유저 인증 및 신규 토큰 발급
+
+==== POST : /api/v2/auth/authorization
+
+Firebase Id token을 사용하여 사용자를 인증하고, 인증한 정보를 바탕으로 신규 Access Token과 Refresh Token을 발급합니다.
+
+해당 API에서는 유저를 인증한 후, Firebase API를 사용하여 로그인한 유저에게 발급된 Firebase의 모든 토큰을 취소 시킵니다. 따라서 이미 사용한 Id token으로 다시 사용자를 인증 할 수 없습니다.
+
+===== Parameters
+
+====== Query Parameters
+[cols="1,1"]
+|===
+|idToken
+|Firebase 에 로그인한 후 발급 받은 Id Token입니다.
+|===
+
+===== Returns
+====== OK 200
+성공적으로 유저 인증을 수행한 후 Access Token과 Refresh Token을 반환합니다.
+
+operation::authorization-success[snippets='http-request,http-response,response-body,response-fields']
+
+====== FORBIDDEN 403
+*NOT_VALID_TOKEN*
+
+주어진 FireBase Id Token 인증에 실패했을 경우 발생합니다. 대체로 올바르지 않은 Firebase id Token을 사용하거나, 이미 인증한 id token으로 다시 인증을 시도할 때 발생할 수 있습니다.
+
+operation::authorization-fail-NOT_VALID_TOKEN[snippets='http-request,http-response,response-body,response-fields']
+
+
+*NOT_VERIFIED_EMAIL*
+
+주어진 FireBase Id Token 인증에는 성공하였지만, 해당 유저가 이메일 인증을 하지 않았을 경우 발생합니다. 다시 이메일 인증을 받을 수 있도록 조치해야합니다.
+
+operation::authorization-fail-NOT_VERIFIED_EMAIL[snippets='http-request,http-response,response-body,response-fields']
+
+*NOT_FOUND_USER*
+
+Firebase Id Token을 통해 유저를 인증에 성공하였지만, 해당 유저의 정보를 DB 상에서 조회할 수 없을 경우 발생합니다. 대체로 회원 가입이 전부 완료되지 않은 유저가 인증을 시도할 경우 발생하며, 이 경우 제대로 회원 가입을 수행할 수 있도록 해야합니다.
+
+operation::authorization-fail-NOT_FOUND_USER[snippets='http-request,http-response,response-body,response-fields']
+
+
+[[publishAccessToken]]
+=== 신규 Access Token 발급
+
+==== POST : /api/v2/auth/accessToken
+
+주어진 Accesss Token이 밴 리스트에 있는지 확인하고, 해당 토큰을 decode한 정보를 리턴합니다.
+
+===== Parameters
+
+====== Query Parameters
+[cols="1,1"]
+|===
+|accessToken
+|검증할 accessToken 입니다.
+|===
+
+===== Returns
+====== OK 200
+성공적으로 유저 인증을 수행한 후 신규 Access Token을 반환합니다.
+
+operation::checkAccessToken-success[snippets='http-request,http-response,response-body,response-fields']
+
+====== FORBIDDEN 403
+*NOT_VALID_TOKEN*
+
+주어진 Refresh Token이 유효하지 않거나, 해당 Refresh Token이 DB에 존재하지 않을 경우 발생합니다. 다시 로그인을 하여 새로운 Refresh Token을 발급받아야 합니다.
+
+operation::authorization-fail-NOT_VALID_TOKEN[snippets='http-request,http-response,response-body,response-fields']
+
+
+[[checkToken]]
+=== Access Token 검증
+
+==== GET : /api/v2/auth/checkAccessToken
+
+주어진 Refresh token을 검증하고, 신규 Access Token 을 발급합니다.
+
+*!주의 별도로 토큰 취소를 하지 않는 이상, 기존에 발급된 Access token은 유효 시간이 만료될 때 까지 취소되지 않습니다.*
+
+===== Returns
+====== OK 200
+성공적으로 유저 인증을 수행한 후 신규 Access Token을 반환합니다.
+
+operation::accessToken-success[snippets='http-request,http-response,response-body,response-fields']
+
+====== FORBIDDEN 403
+*NOT_VALID_TOKEN*
+
+해당 Access Token이 유효하지 않거나, Ban list에 등록되어있는 경우 발생합니다.
+
+operation::checkAccessToken-fail-NOT_VALID_TOKEN[snippets='http-request,http-response,response-body,response-fields']
+
+[[revokeTokens]]
+=== 토큰 취소
+
+==== DELETE : /api/v2/auth/revoke
+
+주어진 refresh token과 access token을 취소시킵니다.
+
+*refresh token은 DB에서 삭제 됩니다.*
+
+*access token은 유효시간 만큼 ban list에 등록됩니다.*
+
+===== Returns
+====== OK 200
+두 개의 토큰을 모두 삭제합니다.
+
+operation::revokeTokens-success[snippets='http-request,http-response,response-body,response-fields']
+
+====== Non-Authoritative Information 203
+
+Refresh token은 성공적으로 삭제 하였지만, 해당 Access Token은 삭제하지 못한 상태입니다.
+
+Access Token의 유효시간이 만료 되었거나, 해당 Refresh Token과 claim 정보가 다를 경우 발생할 수 있습니다.
+
+operation::revokeTokens-half-success[snippets='http-request,http-response,response-body,response-fields']
+
+====== FORBIDDEN 403
+*NOT_VALID_TOKEN*
+
+Refresh Token이 유효하지 않으면 발생합니다. Access Token은 유효하더라도 삭제를 수행하지 않습니다.
+
+operation::revokeTokens-fail[snippets='http-request,http-response,response-body,response-fields']
