@@ -93,6 +93,8 @@ public class AuthApiController {
 
         try {
             refreshTokenInfo = tokenManager.verifyToken(refreshToken,false);
+            boolean result = tokenService.revokeRefreshToken(refreshToken);
+            assert result;
         } catch (JGWAuthException | JWTCreationException | AssertionError exception){
             return ResponseEntity.badRequest().body(new MessageDto("유효하지 않은 토큰입니다."));
         }

@@ -17,6 +17,7 @@ import com.jaramgroupware.auth.testConfig.TestJackson2ObjectConfig;
 import com.jaramgroupware.auth.testConfig.TestRSAConfig;
 import com.jaramgroupware.auth.testUtils.TestUtils;
 import com.jaramgroupware.auth.utlis.jwt.JwtTokenInfo;
+import com.jaramgroupware.auth.utlis.jwt.JwtTokenVerifyInfo;
 import com.jaramgroupware.auth.utlis.jwt.TokenManagerImpl;
 import jakarta.servlet.http.Cookie;
 import lombok.extern.slf4j.Slf4j;
@@ -45,8 +46,7 @@ import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.restdocs.cookies.CookieDocumentation.responseCookies;
 import static org.springframework.restdocs.cookies.CookieDocumentation.cookieWithName;
@@ -465,5 +465,237 @@ class AuthApiControllerTest {
                 .andExpect(jsonPath("$.role_id").value(testMember.getRole()));
         verify(tokenManager).decodeToken(testAccessToken);
         verify(tokenService).checkAccessToken(testAccessToken);
+    }
+
+    @Test
+    @Description("checkToken - decode 불가능한 토큰일경우 , NOT_VALID_TOKEN가 발생한다.")
+    void testCheckToken2() throws Exception {
+        //given
+        String testAccessToken = "thisIs.Cannotdecode.Token";
+
+        doThrow(new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"유효하지 않은 토큰입니다. 다시 로그인해주세요.")).when(tokenManager).decodeToken(testAccessToken);
+
+        //when
+        ResultActions result = mvc.perform(
+                get("/api/v2/auth/checkAccessToken")
+                        .queryParam("accessToken",testAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("checkAccessToken-fail-NOT_VALID_TOKEN",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("status").description("HTTP code"),
+                                fieldWithPath("title").description("오류 제목"),
+                                fieldWithPath("detail").description("오류 상세 설명")
+
+                        )
+                ));
+        //then
+        result.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value(JGWAuthErrorCode.NOT_VALID_TOKEN.getTitle()));
+        verify(tokenManager).decodeToken(testAccessToken);
+    }
+
+    @Test
+    @Description("checkToken - black list에 등록된 access token이 주어지면, NOT_VALID_TOKEN을 리턴한다.")
+    void testCheckToken3() throws Exception {
+        //given
+        String testAccessToken = "thisIs.ValidAccess.Token";
+        var testDate = new Date();
+        var testMember = testUtils.getTestMember();
+        var jwtTokenInfo = JwtTokenInfo
+                .builder()
+                .isAccessToken(false)
+                .email(testMember.getEmail())
+                .uid(testMember.getId())
+                .expiredAt(testDate)
+                .role(testMember.getRole())
+                .build();
+
+        doReturn(jwtTokenInfo).when(tokenManager).decodeToken(testAccessToken);
+        doThrow(new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"사용 불가능한 토큰입니다. 다시 로그인해주세요.")).when(tokenService).checkAccessToken(testAccessToken);
+        //when
+        ResultActions result = mvc.perform(
+                get("/api/v2/auth/checkAccessToken")
+                        .queryParam("accessToken",testAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("checkAccessToken-success",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("status").description("HTTP code"),
+                                fieldWithPath("title").description("오류 제목"),
+                                fieldWithPath("detail").description("오류 상세 설명")
+
+                        )
+                ));
+        //then
+        result.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value(JGWAuthErrorCode.NOT_VALID_TOKEN.getTitle()));
+        verify(tokenManager).decodeToken(testAccessToken);
+        verify(tokenService).checkAccessToken(testAccessToken);
+    }
+
+    @Test
+    @Description("revokeTokens - 정상적인 refresh token과 accss token이 주어지면, 성공적으로 삭제했다는 메시지를 리턴한다.")
+    void testRevokeTokens() throws Exception {
+        //given
+        String testAccessToken = "thisIs.ValidAccess.Token";
+        String testRefreshToken = "thisIs.ValidRefresh.Token";
+        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        var testDate = new Date();
+        var testMember = testUtils.getTestMember();
+
+        var jwtTokenInfo = JwtTokenInfo.builder()
+                .isAccessToken(false)
+                .email(testMember.getEmail())
+                .uid(testMember.getId())
+                .expiredAt(testDate)
+                .role(testMember.getRole())
+                .build();
+
+
+        doReturn(jwtTokenInfo).when(tokenManager).verifyToken(testRefreshToken,false);
+        doReturn(true).when(tokenService).revokeRefreshToken(testRefreshToken);
+        doReturn(jwtTokenInfo).when(tokenManager).verifyToken(testAccessToken, JwtTokenVerifyInfo.builder()
+                        .uid(jwtTokenInfo.getUid())
+                        .email(jwtTokenInfo.getEmail())
+                        .isAccessToken(true)
+                        .build());
+
+        //when
+        ResultActions result = mvc.perform(
+                delete("/api/v2/auth/revoke")
+                        .queryParam("accessToken",testAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .cookie(cookie))
+                .andDo(print())
+                .andDo(document("revokeTokens-success",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("message").description("처리 결과")
+                        )
+                ));
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(cookie().maxAge("jgw_refresh",0))
+                .andExpect(jsonPath("$.message").value("성공적으로 모든 토큰을 삭제했습니다."));
+
+        verify(tokenManager).verifyToken(testRefreshToken,false);
+        verify(tokenService).revokeRefreshToken(testRefreshToken);
+        verify(tokenManager).verifyToken(testAccessToken, JwtTokenVerifyInfo.builder()
+                .uid(jwtTokenInfo.getUid())
+                .email(jwtTokenInfo.getEmail())
+                .isAccessToken(true)
+                .build());
+        verify(tokenService).revokeAccessToken(testAccessToken,jwtTokenInfo.getUid(),jwtTokenInfo.getExpiredAt());
+    }
+
+    @Test
+    @Description("revokeTokens - 정상적인 refresh token과 비정상적인 accss token이 주어지면, 일부 토큰만 삭제했다는 메시지를 리턴한다.")
+    void testRevokeTokens2() throws Exception {
+        //given
+        String testAccessToken = "thisIs.NotValidAccess.Token";
+        String testRefreshToken = "thisIs.ValidRefresh.Token";
+        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        var testDate = new Date();
+        var testMember = testUtils.getTestMember();
+
+        var jwtTokenInfo = JwtTokenInfo.builder()
+                .isAccessToken(false)
+                .email(testMember.getEmail())
+                .uid(testMember.getId())
+                .expiredAt(testDate)
+                .role(testMember.getRole())
+                .build();
+
+
+        doReturn(jwtTokenInfo).when(tokenManager).verifyToken(testRefreshToken,false);
+        doReturn(true).when(tokenService).revokeRefreshToken(testRefreshToken);
+        doThrow(new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"유효하지 않은 토큰입니다. 다시 로그인해주세요."))
+                .when(tokenManager).verifyToken(testAccessToken, JwtTokenVerifyInfo.builder()
+                .uid(jwtTokenInfo.getUid())
+                .email(jwtTokenInfo.getEmail())
+                .isAccessToken(true)
+                .build());
+
+        //when
+        ResultActions result = mvc.perform(
+                delete("/api/v2/auth/revoke")
+                        .queryParam("accessToken",testAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .cookie(cookie))
+                .andDo(print())
+                .andDo(document("revokeTokens-half-success",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("message").description("처리 결과")
+                        )
+                ));
+
+        //then
+        result.andExpect(status().is(203))
+                .andExpect(cookie().maxAge("jgw_refresh",0))
+                .andExpect(jsonPath("$.message").value("일부 토큰을 성공적으로 취소 했습니다."));
+
+        verify(tokenManager).verifyToken(testRefreshToken,false);
+        verify(tokenService).revokeRefreshToken(testRefreshToken);
+        verify(tokenManager).verifyToken(testAccessToken, JwtTokenVerifyInfo.builder()
+                .uid(jwtTokenInfo.getUid())
+                .email(jwtTokenInfo.getEmail())
+                .isAccessToken(true)
+                .build());
+    }
+
+    @Test
+    @Description("revokeTokens - 비정상적인 refresh token이 주어지면, AccessToken의 valid 여부와 상관 없이 유효하지 않은 토큰이라는 메시지를 리턴한다.")
+    void testRevokeTokens3() throws Exception {
+        //given
+        String testAccessToken = "thisIs.NotValidAccess.Token";
+        String testRefreshToken = "thisIs.NotValidRefresh.Token";
+
+        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        cookie.setSecure(true);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+
+        doThrow(new JGWAuthException(JGWAuthErrorCode.NOT_VALID_TOKEN,"유효하지 않은 토큰입니다. 다시 로그인해주세요.")).when(tokenManager).verifyToken(testRefreshToken,false);
+
+        //when
+        ResultActions result = mvc.perform(
+                delete("/api/v2/auth/revoke")
+                        .queryParam("accessToken",testAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .cookie(cookie))
+                .andDo(print())
+                .andDo(document("revokeTokens-fail",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("message").description("처리 결과")
+                        )
+                ));
+
+        //then
+        result.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("유효하지 않은 토큰입니다."));
+
+
+        verify(tokenManager).verifyToken(testRefreshToken,false);
     }
 }

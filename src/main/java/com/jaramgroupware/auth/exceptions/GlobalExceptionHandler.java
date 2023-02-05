@@ -86,7 +86,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(exception.getJgwAuthErrorCode().getHttpStatus()).body(ExceptionMessageDto.builder()
                 .status(exception.getJgwAuthErrorCode().getHttpStatus())
                 .title(exception.getJgwAuthErrorCode().getTitle())
-                .detail(exception.getJgwAuthErrorCode().getMessage())
+                .detail(exception.getDetail())
                 .build());
     }
 
