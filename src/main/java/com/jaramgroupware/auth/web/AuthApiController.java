@@ -140,10 +140,12 @@ public class AuthApiController {
                         .roleID(jwtTokenInfo.getRole())
                         .build());
     }
+
     @GetMapping("/email")
     public void indexEmail(@RequestParam(value = "idToken",required = true) String idToken) throws FirebaseAuthException {
         fireBaseApi.indexUserMakeEmail(idToken);
     }
+
     private Cookie createHttpOnlyCookie(String key,String value){
         var cookie = new Cookie(key,value);
         cookie.setSecure(true);
