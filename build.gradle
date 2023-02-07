@@ -135,3 +135,6 @@ task devBuild {
     dependsOn copyDocument
     finalizedBy clean, build
 }
+task getHomeDir {
+    println project.projectDir.getAbsolutePath()
+}

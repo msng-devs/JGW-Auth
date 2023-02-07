@@ -698,4 +698,72 @@ class AuthApiControllerTest {
 
         verify(tokenManager).verifyToken(testRefreshToken,false);
     }
+
+    @Test
+    @Description("checkIdToken - 올바른 id token이 주어지면, 해당 uid를 리턴한다.")
+    void checkIdToken() throws Exception {
+        //given
+        var testUser = testUtils.getTestMember();
+        var testIdToken = "thisIsValidToken";
+
+
+        var testUid = testUser.getId();
+        var testFireBaseTokenInfo = FireBaseTokenInfo.builder()
+                .idToken(testIdToken)
+                .uid(testUid)
+                .expireDateTime(LocalDateTime.now())
+                .build();
+
+        doReturn(testFireBaseTokenInfo).when(fireBaseApi).checkToken(testIdToken);
+
+        //when
+        ResultActions result = mvc.perform(
+                get("/api/v2/auth/checkIdToken")
+                        .queryParam("idToken",testIdToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("checkIdToken-success",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("uid").description("해당 id token의 uid")
+                        )
+                ));
+        //then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.uid").value(testUid));
+        verify(fireBaseApi).checkToken(testIdToken);
+    }
+
+    @Test
+    @Description("checkIdToken - 올바르지 않은 id token이 주어지면, JGWAuthException이 발생한다.")
+    void checkIdToken2() throws Exception {
+        //given
+
+        var testIdToken = "thisIsNotValidToken";
+
+        doThrow(new FirebaseApiException(FireBaseErrorCode.NOT_VALID_TOKEN)).when(fireBaseApi).checkToken(testIdToken);
+
+        //when
+        ResultActions result = mvc.perform(
+                get("/api/v2/auth/checkIdToken")
+                        .queryParam("idToken",testIdToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andDo(document("checkIdToken-fail",
+                        preprocessRequest(prettyPrint()),
+                        preprocessResponse(prettyPrint()),
+                        responseFields(
+                                fieldWithPath("status").description("HTTP code"),
+                                fieldWithPath("title").description("오류 제목"),
+                                fieldWithPath("detail").description("오류 상세 설명")
+                        )
+                ));
+        //then
+        result.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value(FireBaseErrorCode.NOT_VALID_TOKEN.getTitle()));
+        verify(fireBaseApi).checkToken(testIdToken);
+    }
 }
