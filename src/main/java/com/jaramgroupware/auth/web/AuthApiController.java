@@ -19,10 +19,12 @@ import com.jaramgroupware.auth.utlis.jwt.JwtTokenInfo;
 import com.jaramgroupware.auth.utlis.jwt.JwtTokenVerifyInfo;
 import com.jaramgroupware.auth.utlis.jwt.TokenManagerImpl;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,7 +43,8 @@ public class AuthApiController {
     @PostMapping("/authorization")
     public ResponseEntity<PublishTokenResponseControllerDto> authorizationIdTokenAndPublishTokens(
             @RequestParam(value = "idToken",required = true) String idToken,
-            HttpServletResponse response
+            HttpServletResponse response,
+            HttpServletRequest request
     ){
 
         //firebase idToken 인증 후에 토큰을 모두 삭제시킴
@@ -62,9 +65,9 @@ public class AuthApiController {
         //xss 방어를 위해 access token만 response body로 전달하고, refresh token은 http only cookie에 저장함.
         var result = tokens.toControllerDto();
 
-        var refreshCookie = createHttpOnlyCookie("jgw_refresh",tokens.getRefreshToken());
+        var refreshCookie = createHttpOnlyCookie("jgw_refresh",tokens.getRefreshToken(),false);
 
-        response.addCookie(refreshCookie);
+        response.addHeader("Set-Cookie", refreshCookie.toString());
 
         return ResponseEntity.ok(result);
 
@@ -74,6 +77,7 @@ public class AuthApiController {
     public ResponseEntity<PublishAccessTokenResponseControllerDto> publishAccessToken(
             @CookieValue("jgw_refresh") String refreshToken
     ){
+
         JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(refreshToken);
         String uid = tokenService.checkRefreshToken(refreshToken);
 
@@ -104,9 +108,8 @@ public class AuthApiController {
         }
 
         //기존에 저장된 refresh 토큰은 제거한다.
-        var cookie = createHttpOnlyCookie("jgw_refresh",null);
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        var cookie = createHttpOnlyCookie("jgw_refresh",null,true);
+        response.addHeader("Set-Cookie", cookie.toString());
 
         //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
         try {
@@ -157,12 +160,21 @@ public class AuthApiController {
 //        fireBaseApi.indexUserMakeEmail(idToken);
 //    }
 
-    private Cookie createHttpOnlyCookie(String key,String value){
-        var cookie = new Cookie(key,value);
-        cookie.setSecure(true);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
+    private ResponseCookie createHttpOnlyCookie(String key,String value,boolean isExpired){
 
-        return cookie;
+        if(isExpired) return ResponseCookie.from(key, value)
+                .path("/")
+                .sameSite("Strict")
+                .httpOnly(true)
+                .secure(true)
+                .maxAge(0)
+                .build();
+
+        return ResponseCookie.from(key, value)
+                .path("/")
+                .sameSite("Strict")
+                .httpOnly(true)
+                .secure(true)
+                .build();
     }
 }
