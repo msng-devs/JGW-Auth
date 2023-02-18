@@ -139,13 +139,13 @@ class AuthApiControllerTest {
 
                         ),
                         responseCookies(
-                                cookieWithName("jgw_refresh").description("새롭게 발급된 refresh token은 HttpOnly Secure가 지정되어 쿠키로 저장됩니다.")
+                                cookieWithName("jgwrefresh").description("새롭게 발급된 refresh token은 HttpOnly Secure가 지정되어 쿠키로 저장됩니다.")
                         )
                 ));
 
         //then
         result.andExpect(status().isOk())
-                .andExpect(cookie().exists("jgw_refresh"))
+                .andExpect(cookie().exists("jgwrefresh"))
                 .andExpect(jsonPath("$.access_token").value(testAccessToken))
                 .andExpect(jsonPath("$.access_token_expired").value(simpleDateFormat.format(testDate)))
                 .andExpect(jsonPath("$.refresh_token_expired").value(simpleDateFormat.format(testDate)));
@@ -288,7 +288,7 @@ class AuthApiControllerTest {
 
         String testNewAccessToken = "thisIsNewAccessToken!";
 
-        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        var cookie = new Cookie("jgwrefresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
@@ -358,7 +358,7 @@ class AuthApiControllerTest {
                 .build();
 
 
-        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        var cookie = new Cookie("jgwrefresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
@@ -396,7 +396,7 @@ class AuthApiControllerTest {
         String testRefreshToken = "thisIsValidRefreshToken!";
 
 
-        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        var cookie = new Cookie("jgwrefresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
@@ -538,7 +538,7 @@ class AuthApiControllerTest {
         //given
         String testAccessToken = "thisIs.ValidAccess.Token";
         String testRefreshToken = "thisIs.ValidRefresh.Token";
-        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        var cookie = new Cookie("jgwrefresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
@@ -579,7 +579,7 @@ class AuthApiControllerTest {
                 ));
         //then
         result.andExpect(status().isOk())
-                .andExpect(cookie().maxAge("jgw_refresh",0))
+                .andExpect(cookie().maxAge("jgwrefresh",0))
                 .andExpect(jsonPath("$.message").value("성공적으로 모든 토큰을 삭제했습니다."));
 
         verify(tokenManager).verifyToken(testRefreshToken,false);
@@ -598,7 +598,7 @@ class AuthApiControllerTest {
         //given
         String testAccessToken = "thisIs.NotValidAccess.Token";
         String testRefreshToken = "thisIs.ValidRefresh.Token";
-        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        var cookie = new Cookie("jgwrefresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
@@ -641,7 +641,7 @@ class AuthApiControllerTest {
 
         //then
         result.andExpect(status().is(203))
-                .andExpect(cookie().maxAge("jgw_refresh",0))
+                .andExpect(cookie().maxAge("jgwrefresh",0))
                 .andExpect(jsonPath("$.message").value("일부 토큰을 성공적으로 취소 했습니다."));
 
         verify(tokenManager).verifyToken(testRefreshToken,false);
@@ -660,7 +660,7 @@ class AuthApiControllerTest {
         String testAccessToken = "thisIs.NotValidAccess.Token";
         String testRefreshToken = "thisIs.NotValidRefresh.Token";
 
-        var cookie = new Cookie("jgw_refresh",testRefreshToken);
+        var cookie = new Cookie("jgwrefresh",testRefreshToken);
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setPath("/");

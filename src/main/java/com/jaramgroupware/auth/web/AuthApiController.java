@@ -66,7 +66,7 @@ public class AuthApiController {
         //xss 방어를 위해 access token만 response body로 전달하고, refresh token은 http only cookie에 저장함.
         var result = tokens.toControllerDto();
 
-        var refreshCookie = createHttpOnlyCookie("jgw_refresh",tokens.getRefreshToken(),false);
+        var refreshCookie = createHttpOnlyCookie("jgwrefresh",tokens.getRefreshToken(),false);
 
 //        response.addHeader("Set-Cookie", refreshCookie.toString());
         response.addCookie(refreshCookie);
@@ -76,7 +76,7 @@ public class AuthApiController {
 
     @PostMapping("/accessToken")
     public ResponseEntity<PublishAccessTokenResponseControllerDto> publishAccessToken(
-            @CookieValue("jgw_refresh") String refreshToken
+            @CookieValue("jgwrefresh") String refreshToken
     ){
         log.debug("try publish new Access token.  refresh token = {}",refreshToken);
         JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(refreshToken);
@@ -93,7 +93,7 @@ public class AuthApiController {
 
     @DeleteMapping("/revoke")
     public ResponseEntity<MessageDto> revokeTokens(
-            @CookieValue("jgw_refresh") String refreshToken,
+            @CookieValue("jgwrefresh") String refreshToken,
             @RequestParam(value = "accessToken") String accessToken,
             HttpServletResponse response){
 
@@ -108,7 +108,7 @@ public class AuthApiController {
         }
 
         //기존에 저장된 refresh 토큰은 제거한다.
-        var cookie = createHttpOnlyCookie("jgw_refresh",null,true);
+        var cookie = createHttpOnlyCookie("jgwrefresh",null,true);
 //        response.addHeader("Set-Cookie", cookie.toString());
         response.addCookie(cookie);
         //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
