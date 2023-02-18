@@ -68,8 +68,8 @@ public class AuthApiController {
 
         var refreshCookie = createHttpOnlyCookie("jgw_refresh",tokens.getRefreshToken(),false);
 
-        response.addHeader("Set-Cookie", refreshCookie.toString());
-
+//        response.addHeader("Set-Cookie", refreshCookie.toString());
+        response.addCookie(refreshCookie);
         return ResponseEntity.ok(result);
 
     }
@@ -78,7 +78,7 @@ public class AuthApiController {
     public ResponseEntity<PublishAccessTokenResponseControllerDto> publishAccessToken(
             @CookieValue("jgw_refresh") String refreshToken
     ){
-
+        log.debug("try publish new Access token.  refresh token = {}",refreshToken);
         JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(refreshToken);
         String uid = tokenService.checkRefreshToken(refreshToken);
 
@@ -88,7 +88,6 @@ public class AuthApiController {
                         .roleID(jwtTokenInfo.getRole())
                         .email(jwtTokenInfo.getEmail())
                         .build());
-
         return ResponseEntity.ok(accessTokenInfo.toControllerDto());
     }
 
@@ -110,8 +109,8 @@ public class AuthApiController {
 
         //기존에 저장된 refresh 토큰은 제거한다.
         var cookie = createHttpOnlyCookie("jgw_refresh",null,true);
-        response.addHeader("Set-Cookie", cookie.toString());
-
+//        response.addHeader("Set-Cookie", cookie.toString());
+        response.addCookie(cookie);
         //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
         try {
             JwtTokenInfo accessTokenInfo = tokenManager.verifyToken(accessToken,
@@ -185,21 +184,31 @@ public class AuthApiController {
 //        fireBaseApi.indexUserMakeEmail(idToken);
 //    }
 
-    private ResponseCookie createHttpOnlyCookie(String key,String value,boolean isExpired){
+    private Cookie createHttpOnlyCookie(String key,String value,boolean isExpired){
+        var cookie = new Cookie(key,value);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setSecure(true);
 
-        if(isExpired) return ResponseCookie.from(key, value)
-                .path("/")
-                .sameSite("Strict")
-                .httpOnly(true)
-                .secure(true)
-                .maxAge(0)
-                .build();
+        if(isExpired) {
+            cookie.setMaxAge(0);
+            return cookie;
+        }
+        return cookie;
 
-        return ResponseCookie.from(key, value)
-                .path("/")
-                .sameSite("Strict")
-                .httpOnly(true)
-                .secure(true)
-                .build();
+//        if(isExpired) return ResponseCookie.from(key, value)
+//                .path("/")
+//                .sameSite("Strict")
+//                .httpOnly(true)
+//                .secure(true)
+//                .maxAge(0)
+//                .build();
+//
+//        return ResponseCookie.from(key, value)
+//                .path("/")
+//                .sameSite("Strict")
+//                .httpOnly(true)
+//                .secure(true)
+//                .build();
     }
 }
