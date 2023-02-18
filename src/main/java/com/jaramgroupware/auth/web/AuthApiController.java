@@ -72,9 +72,9 @@ public class AuthApiController {
 
         var refreshCookie = createHttpOnlyCookie("jgwrefresh",tokens.getRefreshToken(),false);
 
-//        response.addHeader("Set-Cookie", refreshCookie.toString());
-        response.addCookie(refreshCookie);
+        response.addHeader("Set-Cookie", refreshCookie.toString());
         response.setHeader("access-control-expose-headers","Set-Cookie");
+
         return ResponseEntity.ok(result);
 
     }
@@ -83,7 +83,7 @@ public class AuthApiController {
     public ResponseEntity<PublishAccessTokenResponseControllerDto> publishAccessToken(
             @CookieValue("jgwrefresh") String refreshToken
     ){
-        log.debug("try publish new Access token.  refresh token = {}",refreshToken);
+        log.debug("token = {}",refreshToken);
         JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(refreshToken);
         String uid = tokenService.checkRefreshToken(refreshToken);
 
@@ -93,6 +93,7 @@ public class AuthApiController {
                         .roleID(jwtTokenInfo.getRole())
                         .email(jwtTokenInfo.getEmail())
                         .build());
+
         return ResponseEntity.ok(accessTokenInfo.toControllerDto());
     }
 
@@ -114,9 +115,9 @@ public class AuthApiController {
 
         //기존에 저장된 refresh 토큰은 제거한다.
         var cookie = createHttpOnlyCookie("jgwrefresh",null,true);
-//        response.addHeader("Set-Cookie", cookie.toString());
-        response.addCookie(cookie);
+        response.addHeader("Set-Cookie", cookie.toString());
         response.setHeader("access-control-expose-headers","Set-Cookie");
+
         //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
         try {
             JwtTokenInfo accessTokenInfo = tokenManager.verifyToken(accessToken,
@@ -190,17 +191,23 @@ public class AuthApiController {
 //        fireBaseApi.indexUserMakeEmail(idToken);
 //    }
 
-    private Cookie createHttpOnlyCookie(String key,String value,boolean isExpired){
-        var cookie = new Cookie(key,value);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setSecure(true);
-        cookie.setDomain(cookieDomain);
-        if(isExpired) {
-            cookie.setMaxAge(0);
-            return cookie;
-        }
-        return cookie;
+    private ResponseCookie createHttpOnlyCookie(String key,String value,boolean isExpired){
+        if(isExpired) return ResponseCookie.from(key, value)
+                .path("/")
+                .sameSite("Strict")
+                .httpOnly(true)
+                .secure(true)
+                .domain(cookieDomain)
+                .maxAge(0)
+                .build();
+
+        return ResponseCookie.from(key, value)
+                .path("/")
+                .sameSite("Strict")
+                .httpOnly(true)
+                .domain(cookieDomain)
+                .secure(true)
+                .build();
 
 //        if(isExpired) return ResponseCookie.from(key, value)
 //                .path("/")
