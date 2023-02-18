@@ -829,14 +829,14 @@ Host: docs.jaram.api:8080</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 200 OK
-Set-Cookie: jgw_refresh=thisIsTestRefreshToken; Path=/; Secure; HttpOnly; SameSite=Strict
+Set-Cookie: jgw_refresh=thisIsTestRefreshToken; Path=/; Secure; HttpOnly
 Content-Type: application/json
 Content-Length: 151
 
 {
   "access_token" : "thisIsTestAccessToken",
-  "access_token_expired" : "2023-02-18T16:42:06",
-  "refresh_token_expired" : "2023-02-18T16:42:06"
+  "access_token_expired" : "2023-02-18T19:02:55",
+  "refresh_token_expired" : "2023-02-18T19:02:55"
 }</code></pre>
 </div>
 </div>
@@ -847,8 +847,8 @@ Content-Length: 151
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-json hljs" data-lang="json">{
   "access_token" : "thisIsTestAccessToken",
-  "access_token_expired" : "2023-02-18T16:42:06",
-  "refresh_token_expired" : "2023-02-18T16:42:06"
+  "access_token_expired" : "2023-02-18T19:02:55",
+  "refresh_token_expired" : "2023-02-18T19:02:55"
 }</code></pre>
 </div>
 </div>
@@ -1369,7 +1369,7 @@ Content-Length: 99
 
 {
   "access_token" : "thisIsNewAccessToken!",
-  "access_token_expired" : "2023-02-18T16:42:06"
+  "access_token_expired" : "2023-02-18T19:02:55"
 }</code></pre>
 </div>
 </div>
@@ -1380,7 +1380,7 @@ Content-Length: 99
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-json hljs" data-lang="json">{
   "access_token" : "thisIsNewAccessToken!",
-  "access_token_expired" : "2023-02-18T16:42:06"
+  "access_token_expired" : "2023-02-18T19:02:55"
 }</code></pre>
 </div>
 </div>
@@ -1541,7 +1541,7 @@ Cookie: jgw_refresh=thisIs.ValidRefresh.Token</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 200 OK
-Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 1 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Strict
+Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly
 Content-Type: application/json
 Content-Length: 74
 
@@ -1612,7 +1612,7 @@ Cookie: jgw_refresh=thisIs.ValidRefresh.Token</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 203 Non-Authoritative Information
-Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 1 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Strict
+Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly
 Content-Type: application/json
 Content-Length: 75
 
