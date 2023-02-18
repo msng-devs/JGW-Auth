@@ -829,14 +829,14 @@ Host: docs.jaram.api:8080</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 200 OK
-Set-Cookie: jgw_refresh=thisIsTestRefreshToken; Path=/; Secure; HttpOnly
+Set-Cookie: jgw_refresh=thisIsTestRefreshToken; Path=/; Secure; HttpOnly; SameSite=Strict
 Content-Type: application/json
 Content-Length: 151
 
 {
   "access_token" : "thisIsTestAccessToken",
-  "access_token_expired" : "2023-02-08T20:42:59",
-  "refresh_token_expired" : "2023-02-08T20:42:59"
+  "access_token_expired" : "2023-02-18T16:42:06",
+  "refresh_token_expired" : "2023-02-18T16:42:06"
 }</code></pre>
 </div>
 </div>
@@ -847,8 +847,8 @@ Content-Length: 151
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-json hljs" data-lang="json">{
   "access_token" : "thisIsTestAccessToken",
-  "access_token_expired" : "2023-02-08T20:42:59",
-  "refresh_token_expired" : "2023-02-08T20:42:59"
+  "access_token_expired" : "2023-02-18T16:42:06",
+  "refresh_token_expired" : "2023-02-18T16:42:06"
 }</code></pre>
 </div>
 </div>
@@ -1183,14 +1183,14 @@ Host: docs.jaram.api:8080</code></pre>
 <h7 id="_ok_200_2_http_response"><a class="link" href="#_ok_200_2_http_response">HTTP response</a></h7>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 403 Forbidden
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 146
+Content-Length: 83
 
 {
-  "status" : "FORBIDDEN",
-  "title" : "NOT_VALID_TOKEN",
-  "detail" : "사용 불가능한 토큰입니다. 다시 로그인해주세요."
+  "uid" : "Th1s1sNotRea1U1DDOY0UKNOWH0S",
+  "role_id" : 1,
+  "valid" : true
 }</code></pre>
 </div>
 </div>
@@ -1200,9 +1200,9 @@ Content-Length: 146
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-json hljs" data-lang="json">{
-  "status" : "FORBIDDEN",
-  "title" : "NOT_VALID_TOKEN",
-  "detail" : "사용 불가능한 토큰입니다. 다시 로그인해주세요."
+  "uid" : "Th1s1sNotRea1U1DDOY0UKNOWH0S",
+  "role_id" : 1,
+  "valid" : true
 }</code></pre>
 </div>
 </div>
@@ -1224,19 +1224,19 @@ Content-Length: 146
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>status</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uid</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP code</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">해당 토큰 소유자의 uid, 유효하지 않으면 null 리턴</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>title</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">오류 제목</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>role_id</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Number</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">해당 토큰의 role 정보, 유효하지 않으면 null 리턴</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>detail</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">오류 상세 설명</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>valid</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Boolean</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">유효한지 여부</p></td>
 </tr>
 </tbody>
 </table>
@@ -1266,14 +1266,14 @@ Host: docs.jaram.api:8080</code></pre>
 <h7 id="_forbidden_403_2_http_response"><a class="link" href="#_forbidden_403_2_http_response">HTTP response</a></h7>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 403 Forbidden
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 146
+Content-Length: 61
 
 {
-  "status" : "FORBIDDEN",
-  "title" : "NOT_VALID_TOKEN",
-  "detail" : "유효하지 않은 토큰입니다. 다시 로그인해주세요."
+  "uid" : null,
+  "role_id" : null,
+  "valid" : false
 }</code></pre>
 </div>
 </div>
@@ -1283,9 +1283,9 @@ Content-Length: 146
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-json hljs" data-lang="json">{
-  "status" : "FORBIDDEN",
-  "title" : "NOT_VALID_TOKEN",
-  "detail" : "유효하지 않은 토큰입니다. 다시 로그인해주세요."
+  "uid" : null,
+  "role_id" : null,
+  "valid" : false
 }</code></pre>
 </div>
 </div>
@@ -1307,19 +1307,19 @@ Content-Length: 146
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>status</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">HTTP code</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>uid</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Null</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">해당 토큰 소유자의 uid, 유효하지 않으면 null 리턴</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>title</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">오류 제목</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>role_id</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Null</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">해당 토큰의 role 정보, 유효하지 않으면 null 리턴</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>detail</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">오류 상세 설명</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>valid</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>Boolean</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">유효한지 여부</p></td>
 </tr>
 </tbody>
 </table>
@@ -1369,7 +1369,7 @@ Content-Length: 99
 
 {
   "access_token" : "thisIsNewAccessToken!",
-  "access_token_expired" : "2023-02-08T20:42:58"
+  "access_token_expired" : "2023-02-18T16:42:06"
 }</code></pre>
 </div>
 </div>
@@ -1380,7 +1380,7 @@ Content-Length: 99
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-json hljs" data-lang="json">{
   "access_token" : "thisIsNewAccessToken!",
-  "access_token_expired" : "2023-02-08T20:42:58"
+  "access_token_expired" : "2023-02-18T16:42:06"
 }</code></pre>
 </div>
 </div>
@@ -1541,7 +1541,7 @@ Cookie: jgw_refresh=thisIs.ValidRefresh.Token</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 200 OK
-Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly
+Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 1 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Strict
 Content-Type: application/json
 Content-Length: 74
 
@@ -1612,7 +1612,7 @@ Cookie: jgw_refresh=thisIs.ValidRefresh.Token</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 203 Non-Authoritative Information
-Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly
+Set-Cookie: jgw_refresh=; Path=/; Max-Age=0; Expires=Thu, 1 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Strict
 Content-Type: application/json
 Content-Length: 75
 
