@@ -1,14 +1,14 @@
-FROM openjdk:17 as builder
+FROM openjdk:17-jdk-slim as builder
 COPY gradlew .
 COPY gradle gradle
 COPY build.gradle .
 COPY settings.gradle .
 COPY src src
 RUN chmod +x ./gradlew
-RUN ./gradlew bootjar
+RUN ./gradlew bootJar
 
 
-FROM openjdk:17
+FROM openjdk:17-jdk-slim
 COPY --from=builder build/libs/*.jar app.jar
 HEALTHCHECK --interval=10s --timeout=3s CMD curl -L -s GET 'http://localhost:50002/ping' || PONG
 EXPOSE 50002
