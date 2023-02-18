@@ -70,6 +70,7 @@ public class AuthApiController {
 
 //        response.addHeader("Set-Cookie", refreshCookie.toString());
         response.addCookie(refreshCookie);
+        response.setHeader("access-control-expose-headers","Set-Cookie");
         return ResponseEntity.ok(result);
 
     }
@@ -111,6 +112,7 @@ public class AuthApiController {
         var cookie = createHttpOnlyCookie("jgwrefresh",null,true);
 //        response.addHeader("Set-Cookie", cookie.toString());
         response.addCookie(cookie);
+        response.setHeader("access-control-expose-headers","Set-Cookie");
         //accessToken을 검증하고 해당 토큰을 black list에 추가한다.
         try {
             JwtTokenInfo accessTokenInfo = tokenManager.verifyToken(accessToken,
