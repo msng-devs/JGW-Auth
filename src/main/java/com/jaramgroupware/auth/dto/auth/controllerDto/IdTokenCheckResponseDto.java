@@ -13,4 +13,5 @@ import lombok.*;
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class IdTokenCheckResponseDto {
     private String uid;
+    private boolean isValid;
 }

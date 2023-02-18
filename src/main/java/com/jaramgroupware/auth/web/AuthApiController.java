@@ -10,6 +10,7 @@ import com.jaramgroupware.auth.dto.token.controllerDto.PublishTokenResponseContr
 
 
 import com.jaramgroupware.auth.dto.token.serviceDto.PublishTokenRequestServiceDto;
+import com.jaramgroupware.auth.exceptions.firebase.FirebaseApiException;
 import com.jaramgroupware.auth.exceptions.jgwauth.JGWAuthException;
 import com.jaramgroupware.auth.firebase.FireBaseApiImpl;
 import com.jaramgroupware.auth.firebase.FireBaseTokenInfo;
@@ -136,23 +137,47 @@ public class AuthApiController {
     @GetMapping("/checkAccessToken")
     public ResponseEntity<AuthResponseDto> checkToken(
             @RequestParam(value = "accessToken") String accessToken){
+        JwtTokenInfo jwtTokenInfo;
 
-        JwtTokenInfo jwtTokenInfo = tokenManager.decodeToken(accessToken);
-        tokenService.checkAccessToken(accessToken);
+        try {
+            jwtTokenInfo = tokenManager.decodeToken(accessToken);
+            tokenService.checkAccessToken(accessToken);
+        } catch (JGWAuthException | JWTCreationException | AssertionError exception){
+
+            //위 refresh token은 성공적으로 삭제한 상황이므로, 203을 리턴한다.
+            return ResponseEntity.ok(AuthResponseDto.builder()
+                    .roleID(null)
+                    .uid(null)
+                    .isValid(false)
+                    .build());
+        }
 
         return ResponseEntity.ok(
                 AuthResponseDto.builder()
                         .uid(jwtTokenInfo.getUid())
                         .roleID(jwtTokenInfo.getRole())
+                        .isValid(true)
                         .build());
     }
 
     @GetMapping("/checkIdToken")
     public ResponseEntity<IdTokenCheckResponseDto> checkIdToken(@RequestParam(value = "idToken") String idToken){
-        FireBaseTokenInfo tokenInfo = fireBaseApi.checkToken(idToken);
 
+
+        FireBaseTokenInfo tokenInfo;
+        try {
+            tokenInfo = fireBaseApi.checkToken(idToken);
+        } catch (FirebaseApiException exception){
+            return ResponseEntity.ok(
+                    IdTokenCheckResponseDto.builder()
+                            .uid(null)
+                            .isValid(false)
+                            .build());
+        }
         return ResponseEntity.ok(
-                IdTokenCheckResponseDto.builder().uid(tokenInfo.getUid())
+                IdTokenCheckResponseDto.builder()
+                        .uid(tokenInfo.getUid())
+                        .isValid(true)
                         .build());
     }
 //    @GetMapping("/email")

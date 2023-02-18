@@ -454,15 +454,17 @@ class AuthApiControllerTest {
                         preprocessRequest(prettyPrint()),
                         preprocessResponse(prettyPrint()),
                         responseFields(
-                                fieldWithPath("uid").description("해당 토큰 소유자의 uid"),
-                                fieldWithPath("role_id").description("해당 토큰의 role 정보")
+                                fieldWithPath("uid").description("해당 토큰 소유자의 uid, 유효하지 않으면 null 리턴"),
+                                fieldWithPath("role_id").description("해당 토큰의 role 정보, 유효하지 않으면 null 리턴"),
+                                fieldWithPath("valid").description("유효한지 여부")
 
                         )
                 ));
         //then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.uid").value(testMember.getId()))
-                .andExpect(jsonPath("$.role_id").value(testMember.getRole()));
+                .andExpect(jsonPath("$.role_id").value(testMember.getRole()))
+                .andExpect(jsonPath("$.valid").value(true));
         verify(tokenManager).decodeToken(testAccessToken);
         verify(tokenService).checkAccessToken(testAccessToken);
     }
@@ -486,15 +488,15 @@ class AuthApiControllerTest {
                         preprocessRequest(prettyPrint()),
                         preprocessResponse(prettyPrint()),
                         responseFields(
-                                fieldWithPath("status").description("HTTP code"),
-                                fieldWithPath("title").description("오류 제목"),
-                                fieldWithPath("detail").description("오류 상세 설명")
+                                fieldWithPath("uid").description("해당 토큰 소유자의 uid, 유효하지 않으면 null 리턴"),
+                                fieldWithPath("role_id").description("해당 토큰의 role 정보, 유효하지 않으면 null 리턴"),
+                                fieldWithPath("valid").description("유효한지 여부")
 
                         )
                 ));
         //then
-        result.andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.title").value(JGWAuthErrorCode.NOT_VALID_TOKEN.getTitle()));
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
         verify(tokenManager).decodeToken(testAccessToken);
     }
 
@@ -522,20 +524,10 @@ class AuthApiControllerTest {
                         .queryParam("accessToken",testAccessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andDo(document("checkAccessToken-success",
-                        preprocessRequest(prettyPrint()),
-                        preprocessResponse(prettyPrint()),
-                        responseFields(
-                                fieldWithPath("status").description("HTTP code"),
-                                fieldWithPath("title").description("오류 제목"),
-                                fieldWithPath("detail").description("오류 상세 설명")
-
-                        )
-                ));
+                .andDo(print());
         //then
-        result.andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.title").value(JGWAuthErrorCode.NOT_VALID_TOKEN.getTitle()));
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
         verify(tokenManager).decodeToken(testAccessToken);
         verify(tokenService).checkAccessToken(testAccessToken);
     }
@@ -727,7 +719,8 @@ class AuthApiControllerTest {
                         preprocessRequest(prettyPrint()),
                         preprocessResponse(prettyPrint()),
                         responseFields(
-                                fieldWithPath("uid").description("해당 id token의 uid")
+                                fieldWithPath("uid").description("해당 id token의 uid (유효하지 않을 경우 null 리턴)"),
+                                fieldWithPath("valid").description("유효한지 여부")
                         )
                 ));
         //then
@@ -756,14 +749,13 @@ class AuthApiControllerTest {
                         preprocessRequest(prettyPrint()),
                         preprocessResponse(prettyPrint()),
                         responseFields(
-                                fieldWithPath("status").description("HTTP code"),
-                                fieldWithPath("title").description("오류 제목"),
-                                fieldWithPath("detail").description("오류 상세 설명")
+                                fieldWithPath("uid").description("해당 id token의 uid (유효하지 않을 경우 null 리턴)"),
+                                fieldWithPath("valid").description("유효한지 여부")
                         )
                 ));
         //then
-        result.andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.title").value(FireBaseErrorCode.NOT_VALID_TOKEN.getTitle()));
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
         verify(fireBaseApi).checkToken(testIdToken);
     }
 }

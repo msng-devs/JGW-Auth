@@ -15,4 +15,5 @@ import lombok.*;
 public class AuthResponseDto {
     private String uid;
     private Integer roleID;
+    private boolean isValid;
 }
