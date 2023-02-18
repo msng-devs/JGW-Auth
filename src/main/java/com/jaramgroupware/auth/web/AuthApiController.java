@@ -195,7 +195,7 @@ public class AuthApiController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setSecure(true);
-        cookie.setDomain();
+        cookie.setDomain(cookieDomain);
         if(isExpired) {
             cookie.setMaxAge(0);
             return cookie;
