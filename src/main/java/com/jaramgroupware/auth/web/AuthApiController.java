@@ -24,6 +24,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,9 @@ public class AuthApiController {
     private final MemberServiceImpl memberService;
     private final FireBaseApiImpl fireBaseApi;
     private final TokenManagerImpl tokenManager;
+
+    @Value("${jwt-refreshToken.domain}")
+    private String cookieDomain;
 
     @PostMapping("/authorization")
     public ResponseEntity<PublishTokenResponseControllerDto> authorizationIdTokenAndPublishTokens(
@@ -191,7 +195,7 @@ public class AuthApiController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setSecure(true);
-
+        cookie.setDomain();
         if(isExpired) {
             cookie.setMaxAge(0);
             return cookie;
