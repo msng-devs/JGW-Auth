@@ -70,7 +70,7 @@ public class AuthApiController {
         //xss 방어를 위해 access token만 response body로 전달하고, refresh token은 http only cookie에 저장함.
         var result = tokens.toControllerDto();
 
-        var refreshCookie = createHttpOnlyCookie("jgwrefresh",tokens.getRefreshToken(),false);
+        var refreshCookie = createHttpOnlyCookie("jgwrefresh",tokens.getRefreshToken(), tokenManager.getRefreshTokenExpiredSec());
 
         response.addHeader("Set-Cookie", refreshCookie.toString());
         response.setHeader("access-control-expose-headers","Set-Cookie");
@@ -114,7 +114,7 @@ public class AuthApiController {
         }
 
         //기존에 저장된 refresh 토큰은 제거한다.
-        var cookie = createHttpOnlyCookie("jgwrefresh",null,true);
+        var cookie = createHttpOnlyCookie("jgwrefresh",null,0);
         response.addHeader("Set-Cookie", cookie.toString());
         response.setHeader("access-control-expose-headers","Set-Cookie");
 
@@ -191,23 +191,16 @@ public class AuthApiController {
 //        fireBaseApi.indexUserMakeEmail(idToken);
 //    }
 
-    private ResponseCookie createHttpOnlyCookie(String key,String value,boolean isExpired){
-        if(isExpired) return ResponseCookie.from(key, value)
-                .path("/")
-                .sameSite("Strict")
-                .httpOnly(true)
-                .secure(true)
-                .domain(cookieDomain)
-                .maxAge(0)
-                .build();
-
+    private ResponseCookie createHttpOnlyCookie(String key,String value,Integer expiredSec){
         return ResponseCookie.from(key, value)
                 .path("/")
-                .sameSite("Strict")
+                .sameSite("None")
                 .httpOnly(true)
-                .domain(cookieDomain)
                 .secure(true)
+                .domain(cookieDomain)
+                .maxAge(expiredSec)
                 .build();
+
 
 //        if(isExpired) return ResponseCookie.from(key, value)
 //                .path("/")
