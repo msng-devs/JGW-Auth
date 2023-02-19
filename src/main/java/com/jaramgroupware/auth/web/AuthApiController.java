@@ -69,12 +69,12 @@ public class AuthApiController {
 
         //xss 방어를 위해 access token만 response body로 전달하고, refresh token은 http only cookie에 저장함.
         var result = tokens.toControllerDto();
-
+        log.debug("token result {}",tokens.toString());
         var refreshCookie = createHttpOnlyCookie("jgwrefresh",tokens.getRefreshToken(), tokenManager.getRefreshTokenExpiredSec());
 
         response.addHeader("Set-Cookie", refreshCookie.toString());
         response.setHeader("access-control-expose-headers","Set-Cookie");
-
+        log.debug("publish token -> {}",refreshCookie.toString());
         return ResponseEntity.ok(result);
 
     }

@@ -128,6 +128,7 @@ class TokenServiceTest {
                 .accessToken(testAccessToken)
                 .accessTokenExpired(testExpiredAt)
                 .refreshTokenExpired(testExpiredAt)
+                .refreshToken(testRefreshToken)
                 .build();
 
         doReturn(JwtCreateTokenResult.builder().token(testAccessToken).expiredAt(testExpiredAt).build()).when(tokenManager).createToken(jwtCreateTokenInfo,true);

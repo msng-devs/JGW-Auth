@@ -97,6 +97,7 @@ public class TokenServiceImpl implements TokenService {
                 .accessToken(newAccessTokenInfo.getToken())
                 .accessTokenExpired(newAccessTokenInfo.getExpiredAt())
                 .refreshTokenExpired(newRefreshTokenInfo.getExpiredAt())
+                .refreshToken(newRefreshTokenInfo.getToken())
                 .build();
     }
 
