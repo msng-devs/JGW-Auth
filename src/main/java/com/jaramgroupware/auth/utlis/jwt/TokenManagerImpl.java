@@ -56,6 +56,14 @@ public class TokenManagerImpl implements TokenManager {
                 .build();
     }
 
+    public Integer getRefreshTokenExpiredSec() {
+        return refreshTokenExpiredSec;
+    }
+
+    public Integer getAccessTokenExpiredSec() {
+        return accessTokenExpiredSec;
+    }
+
     /**
      * 입력받은 토큰을 decode하고, 기본적인 검증(alg 검증, 유효시간 검증, sub 검증, claim 검증)을 수행한다.
      * @param token 해제할 토큰
